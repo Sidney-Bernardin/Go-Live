@@ -24,7 +24,7 @@ const store = createStore({
   },
 
   actions: {
-    setErrorMessage: ({ commit }, errMsg) => commit('SET_ERR_MSG', errMsg),
+    setErrMsg: ({ commit }, errMsg) => commit('SET_ERR_MSG', errMsg),
     setSelf: ({ commit }, self) => commit('SET_SELF', self),
   },
 

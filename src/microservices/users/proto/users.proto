@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "users.com";
+
+service Users {
+    rpc GetSelf(GetSelfRequest) returns (GetSelfResponse);
+}
+
+message ProblemDetail {
+    string Type = 1;
+    string Detail = 2;
+}
+
+message GetSelfRequest {
+    string SessionID = 1;
+    repeated string fields = 2;
+}
+
+message GetSelfResponse {
+    string ID = 1;
+    string Username = 2;
+    string Email = 3;
+}

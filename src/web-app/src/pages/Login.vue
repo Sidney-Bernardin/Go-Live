@@ -1,6 +1,12 @@
 <script setup>
 import { ref, reactive, inject } from 'vue'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+import UsersService from '../services/UsersService'
+
+const store = useStore()
+const router = useRouter()
 
 const loading = inject('loading')
 
@@ -30,7 +36,7 @@ const signup = async () => {
 
     router.push({ name: 'Home' })
   } catch (err) {
-    if (err.response.data.type == 'invalid_signup_info')
+    if (err.response?.data.type == 'invalid_signup_info')
       signupError.value = err.response.data.detail
     else store.dispatch('setErrMsg', err)
   }
@@ -50,7 +56,7 @@ const signin = async () => {
 
     router.push({ name: 'Home' })
   } catch (err) {
-    if (err.response.data.type == 'invalid_signin_info')
+    if (err.response?.data.type == 'invalid_signin_info')
       signinError.value = err.response.data.detail
     else store.dispatch('setErrMsg', err)
   }
@@ -75,7 +81,10 @@ const signin = async () => {
         <input type="password" name="password" placeholder="Password" />
 
         <input type="submit" value="Go!" />
-        <Loader />
+
+        <p v-if="signupError">
+          ⚠ {{ signupError }} ⚠
+        </p>
       </form>
 
       <form @submit.prevent="signin">
@@ -88,6 +97,10 @@ const signin = async () => {
         <input type="password" name="password" placeholder="Password" />
 
         <input type="submit" value="Go!" />
+
+        <p v-if="signinError">
+          ⚠ {{ signinError }} ⚠
+        </p>
       </form>
     </div>
   </div>
@@ -107,6 +120,7 @@ h2 {
 
 form {
   display: flex;
+  width: 200px;
   border: 2px solid #c1c1c1;
   border-style: dashed;
   padding: 10px;
@@ -116,5 +130,14 @@ form {
 input[type='submit'],
 label {
   margin-top: 5px;
+}
+
+p {
+  color: red;
+  font-weight: bolder;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 5px 0 0 0;
+  overflow-wrap: break-word;
 }
 </style>

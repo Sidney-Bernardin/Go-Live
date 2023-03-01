@@ -9,14 +9,17 @@ services:
     volumes:
       - ./src/web-app:/app
     environment:
-      VITE_MICROSERVICES_URL: "http://localhost:8000"
-      VITE_RTMP_URL: "http://localhost:8000"
+      VITE_MICROSERVICES_URL: "http://localhost:8001"
+      VITE_RTMP_URL: "http://localhost:8002"
+      VITE_HLS_URL: "http://localhost:8003"
     ports:
       - 5173:5173
     command: ["npm", "run", "dev"]
     depends_on:
       - revers_proxy
       - rtmp
+
+  # ==========================================================================
 
   revers_proxy:
     container_name: revers_proxy
@@ -39,6 +42,36 @@ services:
       - 8003:8080
     depends_on:
       - rooms
+
+  # ==========================================================================
+
+  users:
+    container_name: users
+    image: golang:latest
+    working_dir: /app
+    volumes:
+      - ./src/microservices/users:/app
+    environment:
+      USERS_HTTP_PORT: "8010"
+      USERS_GRPC_PORT: "8011"
+
+      USERS_MONGO_URL: "mongodb://users_db:27017/"
+
+      USERS_DATABASE_TIMEOUT: "10s"
+      USERS_SESSION_LENGTH: "720m"
+    ports:
+      - 8010:8010
+    command: go run main.go
+    depends_on:
+      - users_db
+
+  users_db:
+    container_name: users_db
+    image: mongo:latest
+    ports:
+      - 27017:27017
+
+  # ==========================================================================
 
   rooms:
     container_name: rooms

@@ -1,7 +1,17 @@
-<script setup></script>
+<script setup>
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
+
+const store = useStore()
+const router = useRouter()
+</script>
 
 <template>
   <div class="navigation">
+    <p class="err-msg" v-if="store.state.errMsg">
+      ⚠ {{ store.state.errMsg }} ⚠
+    </p>
+
     <ul class="links">
       <li><router-link to="home">Home</router-link></li>
     </ul>
@@ -37,6 +47,18 @@
   border-bottom-style: double;
   justify-content: space-between;
   align-items: center;
+}
+
+.err-msg {
+  position: absolute;
+  top: 67px;
+  width: 100%;
+  color: red;
+  font-size: 12px;
+  font-weight: bolder;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
 }
 
 ul.links {
