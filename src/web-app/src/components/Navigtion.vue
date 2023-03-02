@@ -1,9 +1,33 @@
 <script setup>
+import { ref, computed, inject } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 
+import SearchBar from './SearchBar.vue'
+import UsersService from '../services/UsersService'
+
+import { removeSessionID } from '../utils'
+
 const store = useStore()
 const router = useRouter()
+
+const loading = inject('loading')
+
+const profilePictureSrc = computed(() => `${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${store.state.self.id}/picture`)
+
+const logout = async () => {
+  loading.value = true
+
+  await UsersService.logout()
+    .then(() => {
+      removeSessionID()
+      store.dispatch('setSelf', null)
+      router.push({ name: 'Login' })
+    })
+    .catch((err) => store.dispatch('handleError', err))
+
+  loading.value = false
+}
 </script>
 
 <template>
@@ -13,23 +37,26 @@ const router = useRouter()
     </p>
 
     <ul class="links">
-      <li><router-link to="home">Home</router-link></li>
+      <li><router-link to="/">Home</router-link></li>
     </ul>
 
-    <input class="search" type="text" placeholder="Search for Users" />
+    <SearchBar v-if="store.state.self" />
 
     <button
+      v-if="store.state.self"
       class="profile-picture"
-      style="background: url('https://i.stack.imgur.com/ttV8S.jpg') center/100%"
+      :style="`background: url(${profilePictureSrc}) center/100%`"
     ></button>
 
-    <div class="dropdown">
+    <div class="dropdown" v-if="store.state.self">
       <ul>
-        <li><router-link to="sidney">Profile</router-link></li>
+        <li>
+          <router-link :to="store.state.self.username">Profile</router-link>
+        </li>
       </ul>
 
       <ul>
-        <li><button>Logout</button></li>
+        <li><button @click="logout">Logout</button></li>
       </ul>
     </div>
   </div>

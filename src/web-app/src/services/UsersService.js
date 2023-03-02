@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getSessionID } from '../utils'
 
 export default {
   getSelf: (fields) =>
@@ -12,12 +13,12 @@ export default {
       headers: { Authorization: `Bearer ${getSessionID()}` },
     }),
 
-  searchUsers: (username, offset, limit, fields) =>
-    axios.get(
-      `users/all?username=${username}&offset=${offset}&limit=${limit}&fields=${fields?.join()}`
-    ),
   getUser: (search, searchBy, fields) =>
     axios.get(
       `users/all/${search}?search_by=${searchBy}&fields=${fields?.join()}`
+    ),
+  searchUsers: (username, offset, limit, fields) =>
+    axios.get(
+      `users/all?username=${username}&offset=${offset}&limit=${limit}&fields=${fields?.join()}`
     ),
 }

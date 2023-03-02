@@ -2,8 +2,10 @@
 import { ref, reactive, inject } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import UsersService from '../services/UsersService'
+
+import axios from 'axios'
+import { setSessionID } from '../utils'
 
 const store = useStore()
 const router = useRouter()
@@ -31,14 +33,14 @@ const signup = async () => {
     const res1 = await UsersService.signup(signupForm)
     setSessionID(res1.data.session_id)
 
-    const res2 = await UsersService.getSelf()
+    const res2 = await UsersService.getSelf(['username'])
     store.dispatch('setSelf', res2.data)
 
     router.push({ name: 'Home' })
   } catch (err) {
     if (err.response?.data.type == 'invalid_signup_info')
       signupError.value = err.response.data.detail
-    else store.dispatch('setErrMsg', err)
+    else store.dispatch('handleError', err)
   }
 
   loading.value = false
@@ -51,14 +53,14 @@ const signin = async () => {
     const res1 = await UsersService.signin(signinForm)
     setSessionID(res1.data.session_id)
 
-    const res2 = await UsersService.getSelf()
+    const res2 = await UsersService.getSelf(['username'])
     store.dispatch('setSelf', res2.data)
 
     router.push({ name: 'Home' })
   } catch (err) {
     if (err.response?.data.type == 'invalid_signin_info')
       signinError.value = err.response.data.detail
-    else store.dispatch('setErrMsg', err)
+    else store.dispatch('handleError', err)
   }
 
   loading.value = false
@@ -72,35 +74,56 @@ const signin = async () => {
         <h2>Sign Up</h2>
 
         <label for="username">Username</label>
-        <input type="text" name="username" placeholder="Username" />
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          v-model="signupForm.username"
+        />
 
         <label for="email">Email</label>
-        <input type="text" name="email" placeholder="Email" />
+        <input
+          type="text"
+          name="email"
+          placeholder="Email"
+          v-model="signupForm.email"
+        />
 
         <label for="password">Password</label>
-        <input type="password" name="password" placeholder="Password" />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          v-model="signupForm.password"
+        />
 
         <input type="submit" value="Go!" />
 
-        <p v-if="signupError">
-          ⚠ {{ signupError }} ⚠
-        </p>
+        <p v-if="signupError">⚠ {{ signupError }} ⚠</p>
       </form>
 
       <form @submit.prevent="signin">
         <h2>Sign In</h2>
 
         <label for="username">Username</label>
-        <input type="text" name="username" placeholder="Username" />
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          v-model="signinForm.username"
+        />
 
         <label for="password">Password</label>
-        <input type="password" name="password" placeholder="Password" />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          v-model="signinForm.password"
+        />
 
         <input type="submit" value="Go!" />
 
-        <p v-if="signinError">
-          ⚠ {{ signinError }} ⚠
-        </p>
+        <p v-if="signinError">⚠ {{ signinError }} ⚠</p>
       </form>
     </div>
   </div>

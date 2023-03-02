@@ -11,20 +11,20 @@ const store = createStore({
   },
 
   mutations: {
-    SET_ERR_MSG: (state, errMsg) => {
-      if (typeof errMsg == String) {
-        state.errMsg = errMsg
+    HANDLE_ERROR: (state, err) => {
+      if (typeof err == 'string') {
+        state.errorMessage = err
         return
       }
 
-      console.error('Unexpected Error', errMsg)
-      state.errMsg = 'Unexpected error, try again later.'
+      console.error('Unexpected Error', err)
+      state.errorMessage = 'Unexpected error, try again later.'
     },
     SET_SELF: (state, self) => (state.self = self),
   },
 
   actions: {
-    setErrMsg: ({ commit }, errMsg) => commit('SET_ERR_MSG', errMsg),
+    handleError: ({ commit }, err) => commit('HANDLE_ERROR', err),
     setSelf: ({ commit }, self) => commit('SET_SELF', self),
   },
 

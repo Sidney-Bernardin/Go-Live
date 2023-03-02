@@ -1,3 +1,3 @@
-export const setSessionID = (sID) => sessionStorage.setItem('session_id', sID)
-export const getSessionID = () => sessionStorage.getItem('session_id')
-export const removeSessionID = () => sessionStorage.removeItem('session_id')
+export const setSessionID = (sID) => localStorage.setItem('session_id', sID)
+export const getSessionID = () => localStorage.getItem('session_id')
+export const removeSessionID = () => localStorage.removeItem('session_id')
