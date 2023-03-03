@@ -16,7 +16,6 @@ type api struct {
 	logger  *zerolog.Logger
 }
 
-// New returns a new api.
 func New(svc domain.Service, l *zerolog.Logger) *api {
 
 	a := &api{

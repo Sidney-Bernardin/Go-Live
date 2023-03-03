@@ -29,15 +29,17 @@ UsersService.getSelf(['username'])
   })
 
 onMounted(() => {
-  /* if (Hls.isSupported()) { */
-  /*   var hls = new Hls({ debug: true }) */
-  /*   hls.loadSource('http://localhost:8003/hls/stream.m3u8') */
-  /*   hls.attachMedia(videoElem.value) */
-  /*   hls.on(Hls.Events.MANIFEST_PARSED, () => { */
-  /*     console.log('Hello, World!') */
-  /*     videoElem.value.play() */
-  /*   }) */
-  /* } */
+  if (Hls.isSupported()) {
+    var hls = new Hls({ debug: true })
+    hls.loadSource(
+      'http://localhost:8003/hls/stream.m3u8?session_id=6400e4784ada72808818b2bc'
+    )
+    hls.attachMedia(videoElem.value)
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      console.log('Hello, World!')
+      videoElem.value.play()
+    })
+  }
 })
 </script>
 
@@ -45,7 +47,8 @@ onMounted(() => {
   <div>
     <Navigation />
 
-    <!--video controls ref="videoElem" /-->
+    <video controls ref="videoElem" style="width: 500px; height: 500px" />
+
     <div class="wrapper">
       <router-view></router-view>
     </div>

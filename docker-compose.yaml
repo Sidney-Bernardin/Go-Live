@@ -61,6 +61,7 @@ services:
       USERS_SESSION_LENGTH: "720m"
     ports:
       - 8010:8010
+      - 8011:8011
     command: go run main.go
     depends_on:
       - users_db
@@ -79,6 +80,21 @@ services:
     working_dir: /app
     volumes:
       - ./src/microservices/rooms:/app
+    environment:
+      ROOMS_HTTP_PORT: "8020"
+      ROOMS_HTTP_PONG_TIMEOUT: "30s"
+
+      ROOMS_USERS_GRPC_ADDR: "users:8011"
+      ROOMS_REDIS_ADDR: "rooms_cache:6379"
+      ROOMS_REDIS_PASSW: ""
     ports:
       - 8020:8020
     command: go run main.go
+    depends_on:
+      - rooms_cache
+
+  rooms_cache:
+    container_name: rooms_cache
+    image: redislabs/redismod
+    ports:
+      - 6379:6379
