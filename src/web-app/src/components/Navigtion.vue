@@ -13,7 +13,12 @@ const router = useRouter()
 
 const loading = inject('loading')
 
-const profilePictureSrc = computed(() => `${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${store.state.self.id}/picture`)
+const profilePictureSrc = computed(
+  () =>
+    `${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${
+      store.state.self.id
+    }/picture`
+)
 
 const logout = async () => {
   loading.value = true
@@ -68,10 +73,12 @@ const logout = async () => {
   display: flex;
   top: 0;
   left: 0;
+  z-index: 1;
   width: 100%;
   height: 60px;
   border-bottom: 6px solid #c1c1c1;
   border-bottom-style: double;
+  background-color: #fff;
   justify-content: space-between;
   align-items: center;
 }
@@ -115,6 +122,7 @@ button.profile-picture {
   border-style: double;
   border-right: none;
   gap: 30px;
+  background-color: #fff;
   padding: 10px;
   flex-direction: column;
   justify-content: space-between;

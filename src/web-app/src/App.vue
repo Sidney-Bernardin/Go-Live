@@ -42,6 +42,6 @@ UsersService.getSelf(['username'])
 
 <style scoped>
 .wrapper {
-  margin-top: 60px;
+  margin: 81px 15px 15px 15px;
 }
 </style>

@@ -4,7 +4,10 @@ func (a *api) doRoutes() {
 
 	a.router.HandleFunc(
 		"/",
-		a.adapt(a.handleIndex, a.logRequest()),
+		a.adapt(
+			a.handleIndex,
+			a.logRequest(),
+		),
 	).Methods("GET")
 
 	a.router.HandleFunc(
