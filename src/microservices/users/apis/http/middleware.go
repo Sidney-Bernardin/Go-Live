@@ -29,7 +29,7 @@ func (a *api) logRequest() adapter {
 			// Log the request.
 			a.logger.Info().
 				Str("method", r.Method).
-				Str("route", r.URL.String()).
+				Str("uri", r.RequestURI).
 				Msg("New request")
 
 			next.ServeHTTP(w, r)

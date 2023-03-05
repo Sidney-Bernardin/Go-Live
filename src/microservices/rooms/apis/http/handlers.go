@@ -7,6 +7,7 @@ import (
 	"rooms/domain"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -15,39 +16,11 @@ func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("index"))
 }
 
-func (a *api) handleCallbacks(w http.ResponseWriter, r *http.Request) {
+func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
-	// Get middleware data from the request's context value.
-	mwData := r.Context().Value("data_from_middleware").(map[string]any)
-	callback := mwData["callback"].(string)
-	sessionID := mwData["session_id"].(string)
-	name := mwData["name"].(string)
+	roomSettings := &domain.RoomSettings{"No Name"}
 
-	var err error
-
-	switch callback {
-	case "create":
-		err = a.service.CreateRoom(sessionID, &domain.RoomSettings{
-			Name: name,
-		})
-
-	case "delete":
-		err = a.service.DeleteRoom(sessionID)
-	case "join":
-		err = a.service.JoinRoom(sessionID, name)
-	case "leave":
-		err = a.service.LeaveRoom(sessionID, name)
-	default:
-
-		// Respond with StatusBadRequest.
-		a.err(w, http.StatusBadRequest, domain.ProblemDetail{
-			Type: PDTypeInvalidCallback,
-		})
-
-		return
-	}
-
-	if err != nil {
+	if err := a.service.CreateRoom(r.FormValue("key"), r.FormValue("name"), roomSettings); err != nil {
 
 		// If err was caused by a problem-detail, respond with StatusBadRequest.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
@@ -56,20 +29,44 @@ func (a *api) handleCallbacks(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Respond with StatusInternalServerError.
-		a.err(w, http.StatusInternalServerError, errors.Wrapf(err, "cannot %s room", callback))
+		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot create room"))
 		return
 	}
 
+	// Respond.
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
+
+	if err := a.service.DeleteRoom(r.FormValue("key")); err != nil {
+
+		// If err was caused by a problem-detail, respond with StatusBadRequest.
+		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
+			a.err(w, http.StatusBadRequest, pd)
+			return
+		}
+
+		// Respond with StatusInternalServerError.
+		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot delete room"))
+		return
+	}
+
+	// Respond.
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *api) handleAuthenticateStream(w http.ResponseWriter, r *http.Request) {
+
+	_ = r.Header.Get("X-Original-Uri")
+
+	// Respond.
 	w.WriteHeader(http.StatusOK)
 }
 
 func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 
-	// Get middleware data from the request's context value.
-	mwData := r.Context().Value("data_from_middleware").(map[string]any)
-	roomID := mwData["room_id"].(string)
-
-	room, err := a.service.GetRoom(roomID)
+	room, err := a.service.GetRoom(mux.Vars(r)["room_id"])
 	if err != nil {
 
 		// If err was caused by a problem-detail, respond with StatusBadRequest.
@@ -94,12 +91,7 @@ func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
-
-	// Get middleware data from the request's context value.
-	mwData := r.Context().Value("data_from_middleware").(map[string]any)
-	sessionID := mwData["session_id"].(string)
-	roomID := mwData["room_id"].(string)
+func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Upgrade the HTTP connection to a WebSocket connection.
 	conn, err := a.upgrader.Upgrade(w, r, nil)
@@ -113,7 +105,10 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	user, diagnosticsChan, err := a.service.NewDiagnosticsListener(sessionID, roomID)
+	sessionID := r.URL.Query().Get("session_id")
+	roomID := r.URL.Query().Get("room_id")
+
+	user, roomChan, err := a.service.JoinRoom(sessionID, roomID)
 	if err != nil {
 
 		// If err was caused by a problem-detail, close with AbnormalClosure.
@@ -123,15 +118,20 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Close with InternalServerErr.
-		a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot get a diagnostics listener"))
+		a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot join room"))
 		return
 	}
 
-	// In another go-routine, listen to the diagnostics-channel and write the
-	// diagnostics to the client.
+	// In another go-routine, listen to the room's channel and write it's
+	// messages to the client.
 	go func() {
 
-		defer conn.Close()
+		defer func() {
+			conn.Close()
+			if err := a.service.LeaveRoom(user.ID, roomID); err != nil {
+				a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot leave room"))
+			}
+		}()
 
 		for {
 			select {
@@ -139,15 +139,15 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 			case <-r.Context().Done():
 				return
 
-			case diagnostic, ok := <-diagnosticsChan:
+			case msg, ok := <-roomChan:
 
-				// Check if the channel was closed.
+				// Check if the room's channel was closed.
 				if !ok {
 					return
 				}
 
-				// Write the diagnostic to the client.
-				if err := conn.WriteJSON(diagnostic); err != nil {
+				// Write the message to the client.
+				if err := conn.WriteJSON(msg); err != nil {
 
 					// Check for close errors.
 					_, isCloseErr := err.(*websocket.CloseError)
@@ -166,7 +166,7 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 	for {
 
 		// Listen for messages from the client.
-		_, msg, err := conn.ReadMessage()
+		_, msgBytes, err := conn.ReadMessage()
 		if err != nil {
 
 			// Check for close errors.
@@ -181,8 +181,8 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Decode the message.
-		var diagnostic domain.Diagnostic
-		if err := json.Unmarshal(msg, &diagnostic); err != nil {
+		var msg map[string]any
+		if err := json.Unmarshal(msgBytes, &msg); err != nil {
 
 			// Close with AbnormalClosure.
 			a.wsCloseErr(conn, websocket.CloseAbnormalClosure, domain.ProblemDetail{
@@ -193,7 +193,7 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := a.service.BroadcastDiagnostic(user, roomID, &diagnostic); err != nil {
+		if err := a.service.BroadcastMessage(user, roomID, msg); err != nil {
 
 			// If err was caused by a problem-detail, close with AbnormalClosure.
 			if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
@@ -202,7 +202,7 @@ func (a *api) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Close with InternalServerErr.
-			a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot broadcast diagnostic"))
+			a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot broadcast message"))
 			return
 		}
 	}

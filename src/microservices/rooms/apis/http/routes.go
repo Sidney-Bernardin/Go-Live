@@ -1,7 +1,5 @@
 package http
 
-import "reflect"
-
 func (a *api) doRoutes() {
 
 	a.router.HandleFunc(
@@ -10,21 +8,34 @@ func (a *api) doRoutes() {
 	).Methods("GET")
 
 	a.router.HandleFunc(
-		"/callbacks/{callback}",
+		"/create",
 		a.adapt(
-			a.handleCallbacks,
+			a.handleCreateRoom,
 			a.logRequest(),
-			a.getPathParams(reflect.String, "callback"),
-			a.getFormValues(reflect.String, "session_id", "name"),
 		),
 	).Methods("POST")
 
 	a.router.HandleFunc(
-		"/diagnostics",
+		"/delete",
 		a.adapt(
-			a.handleDiagnostics,
+			a.handleDeleteRoom,
 			a.logRequest(),
-			a.getQueryParams(reflect.String, "session_id", "room_id"),
+		),
+	).Methods("POST")
+
+	a.router.HandleFunc(
+		"/authenticate_stream",
+		a.adapt(
+			a.handleAuthenticateStream,
+			a.logRequest(),
+		),
+	).Methods("GET")
+
+	a.router.HandleFunc(
+		"/join",
+		a.adapt(
+			a.handleJoinRoom,
+			a.logRequest(),
 		),
 	).Methods("GET")
 
@@ -33,8 +44,6 @@ func (a *api) doRoutes() {
 		a.adapt(
 			a.handleGetRoom,
 			a.logRequest(),
-			a.getPathParams(reflect.String, "room_id"),
 		),
 	).Methods("GET")
-
 }

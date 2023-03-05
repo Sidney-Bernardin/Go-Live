@@ -9,133 +9,92 @@ import (
 )
 
 type Service interface {
-	CreateRoom(sessionID string, settings *RoomSettings) error
+	CreateRoom(sessionID, streamName string, settings *RoomSettings) error
 	GetRoom(roomID string) (*Room, error)
-	JoinRoom(sessionID, roomID string) error
-	LeaveRoom(sessionID, roomID string) error
+	JoinRoom(sessionID, roomID string) (*User, <-chan map[string]any, error)
+	LeaveRoom(userID, roomID string) error
 	DeleteRoom(sessionID string) error
 
-	NewDiagnosticsListener(sessionID, roomID string) (*User, <-chan *Diagnostic, error)
-	BroadcastDiagnostic(user *User, roomID string, diagnostic *Diagnostic) error
+	BroadcastMessage(user *User, roomID string, msg map[string]any) error
 }
 
 type service struct {
 	config *configuration.Configuration
-
-	mu *sync.Mutex
+	mu     *sync.Mutex
 
 	cacheRepo       CacheRepository
 	usersClientRepo UsersClientRepository
 
-	diagnosticsChans map[string]chan *Diagnostic
+	roomChannels map[string]chan map[string]any
 }
 
-// NewService returns a new Service.
 func NewService(
 	config *configuration.Configuration,
 	cacheRepo CacheRepository,
 	usersClientRepo UsersClientRepository,
 ) Service {
 	return &service{
-		config:           config,
-		mu:               &sync.Mutex{},
-		cacheRepo:        cacheRepo,
-		usersClientRepo:  usersClientRepo,
-		diagnosticsChans: map[string]chan *Diagnostic{},
+		config:          config,
+		mu:              &sync.Mutex{},
+		cacheRepo:       cacheRepo,
+		usersClientRepo: usersClientRepo,
+		roomChannels:    make(map[string]chan map[string]any),
 	}
 }
 
-func (svc *service) CreateRoom(sessionID string, settings *RoomSettings) error {
+func (svc *service) CreateRoom(sessionID, streamName string, settings *RoomSettings) error {
 
 	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot get self")
 	}
 
-	// Create a room.
+	if user.ID != streamName {
+		return ProblemDetail{
+			Type:   PDTypeBadStreamID,
+			Detail: "Your stream-name and user-ID dont't match.",
+		}
+	}
+
 	room := &Room{
 		Key:     user.ID,
 		Name:    settings.Name,
 		Viewers: map[string]*Viewer{},
 	}
 
-	// Insert the room into the cache.
 	if err := svc.cacheRepo.InsertRoom(room); err != nil {
 		return errors.Wrap(err, "cannot insert room")
 	}
 
-	// Create a diagnostics channel for the room.
 	svc.mu.Lock()
-	svc.diagnosticsChans[user.ID] = make(chan *Diagnostic)
+	svc.roomChannels[user.ID] = make(chan map[string]any)
 	svc.mu.Unlock()
+
 	return nil
 }
 
 func (svc *service) GetRoom(roomID string) (*Room, error) {
 
-	// Get the room from the cache.
 	room, err := svc.cacheRepo.GetRoom(roomID)
 	return room, errors.Wrap(err, "cannot get room")
 }
 
-func (svc *service) JoinRoom(sessionID, roomID string) error {
-
-	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
-	if err != nil {
-		return errors.Wrap(err, "cannot get self")
-	}
-
-	// Create a viewer and insert it into the cached room.
-	err = svc.cacheRepo.InsertViewer(roomID, &Viewer{user.ID})
-	return errors.Wrap(err, "cannot insert viewer")
-}
-
-func (svc *service) LeaveRoom(sessionID, roomID string) error {
-
-	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
-	if err != nil {
-		return errors.Wrap(err, "cannot get self")
-	}
-
-	// Delete the user's viewer from the cached room.
-	err = svc.cacheRepo.DeleteViewer(roomID, user.ID)
-	return errors.Wrap(err, "cannot delete viewer")
-}
-
-func (svc *service) DeleteRoom(sessionID string) error {
-
-	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
-	if err != nil {
-		return errors.Wrap(err, "cannot get self")
-	}
-
-	// Delete the room from the cache.
-	if err := svc.cacheRepo.DeleteRoom(user.ID); err != nil {
-		return errors.Wrap(err, "cannot delete room")
-	}
-
-	// Delete the room's diagnostics channel.
-	svc.mu.Lock()
-	delete(svc.diagnosticsChans, user.ID)
-	svc.mu.Unlock()
-
-	return nil
-}
-
-func (svc *service) NewDiagnosticsListener(sessionID, roomID string) (*User, <-chan *Diagnostic, error) {
+func (svc *service) JoinRoom(sessionID, roomID string) (*User, <-chan map[string]any, error) {
 
 	user, err := svc.usersClientRepo.GetSelf(sessionID, []string{"username"})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot get self")
 	}
 
-	// Make sure the user is in the room by getting the user's viewer.
-	if _, err := svc.cacheRepo.GetViewer(roomID, user.ID); err != nil {
-		return nil, nil, errors.Wrap(err, "cannot get viewer")
+	viewer := &Viewer{
+		UserID: user.ID,
 	}
 
-	// Get the room's diagnostics channel.
-	diagnosticsChan, ok := svc.diagnosticsChans[roomID]
+	if err := svc.cacheRepo.InsertViewer(roomID, viewer); err != nil {
+		return nil, nil, errors.Wrap(err, "cannot insert viewer")
+	}
+
+	diagnosticsChan, ok := svc.roomChannels[roomID]
 	if !ok {
 		return nil, nil, ProblemDetail{
 			Type:   PDTypeRoomDoesntExist,
@@ -146,37 +105,56 @@ func (svc *service) NewDiagnosticsListener(sessionID, roomID string) (*User, <-c
 	return user, diagnosticsChan, nil
 }
 
-func (svc *service) BroadcastDiagnostic(user *User, roomID string, diagnostic *Diagnostic) error {
+func (svc *service) LeaveRoom(userID, roomID string) error {
 
-	switch diagnostic.Type {
+	err := svc.cacheRepo.DeleteViewer(userID, roomID)
+	return errors.Wrap(err, "cannot delete viewer")
+}
 
-	case "CHAT_MESSAGE":
-		diagnostic.ChatMessage.UserID = user.ID
-		diagnostic.ChatMessage.Username = user.Username
+func (svc *service) DeleteRoom(sessionID string) error {
+
+	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot get self")
+	}
+
+	if err := svc.cacheRepo.DeleteRoom(user.ID); err != nil {
+		return errors.Wrap(err, "cannot delete room")
+	}
+
+	svc.mu.Lock()
+	delete(svc.roomChannels, user.ID)
+	svc.mu.Unlock()
+
+	return nil
+}
+
+func (svc *service) BroadcastMessage(user *User, roomID string, msg map[string]any) error {
+
+	switch msg["type"] {
+
+	case "CHAT":
+		msg["user_id"] = user.ID
+		msg["username"] = user.Username
 
 	default:
 		return nil
 	}
 
-	// Get the room's diagnostics channel.
-	diagnosticsChan, ok := svc.diagnosticsChans[roomID]
+	roomChan, ok := svc.roomChannels[roomID]
 	if !ok {
 		return ProblemDetail{
-			Type:   PDTypeRoomDoesntExist,
-			Detail: "The room's diagnostics weren't found.",
+			Type: PDTypeRoomDoesntExist,
 		}
 	}
 
-	// Get the room from the cache.
 	room, err := svc.cacheRepo.GetRoom(roomID)
 	if err != nil {
 		return errors.Wrap(err, "cannot get room")
 	}
 
-	// Broadcast the diagnostic by sending it through the diagnostics channel
-	// for each viewer in the room.
 	for range room.Viewers {
-		diagnosticsChan <- diagnostic
+		roomChan <- msg
 	}
 
 	return nil

@@ -5,7 +5,6 @@ import { useStore } from 'vuex'
 import Loader from './components/Loader.vue'
 import Navigation from './components/Navigtion.vue'
 
-import Hls from 'hls.js/dist/hls.min'
 import UsersService from './services/UsersService'
 import { removeSessionID } from './utils'
 
@@ -27,27 +26,11 @@ UsersService.getSelf(['username'])
 
     store.dispatch('handleError', err)
   })
-
-onMounted(() => {
-  if (Hls.isSupported()) {
-    var hls = new Hls({ debug: true })
-    hls.loadSource(
-      'http://localhost:8003/hls/stream.m3u8?session_id=6400e4784ada72808818b2bc'
-    )
-    hls.attachMedia(videoElem.value)
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      console.log('Hello, World!')
-      videoElem.value.play()
-    })
-  }
-})
 </script>
 
 <template>
   <div>
     <Navigation />
-
-    <video controls ref="videoElem" style="width: 500px; height: 500px" />
 
     <div class="wrapper">
       <router-view></router-view>

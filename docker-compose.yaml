@@ -23,19 +23,17 @@ services:
 
   revers_proxy:
     container_name: revers_proxy
-    image: nginx:1.17.10
-    volumes:
-      - ./revers_proxy/dev/nginx.conf:/etc/nginx/nginx.conf
+    build: ./revers_proxy/dev
     ports:
       - 8001:80
     depends_on:
+      - users
       - rooms
 
   rtmp:
     container_name: rtmp
-    image: tiangolo/nginx-rtmp
+    build: ./rtmp/dev
     volumes:
-      - ./rtmp/dev/nginx.conf:/etc/nginx/nginx.conf
       - ./rtmp/dev/data/hls:/tmp/hls
     ports:
       - 8002:1935
