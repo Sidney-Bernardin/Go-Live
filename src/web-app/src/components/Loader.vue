@@ -2,12 +2,13 @@
 
 <template>
   <div class="loader">
-    <h1>Loading...</h1>
+    <h1>Loading, please wait...</h1>
   </div>
 </template>
 
 <style scoped>
 .loader {
+  z-index: 1;
   position: fixed;
   top: 0;
   left: 0;

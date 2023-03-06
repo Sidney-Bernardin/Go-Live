@@ -21,4 +21,6 @@ export default {
     axios.get(
       `users/all?username=${username}&offset=${offset}&limit=${limit}&fields=${fields?.join()}`
     ),
+  profilePictureSrc: (userID) =>
+    `http://${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${userID}/picture`,
 }

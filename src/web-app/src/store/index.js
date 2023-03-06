@@ -1,64 +1,12 @@
 import { createStore } from 'vuex'
 import RoomsService from '../services/RoomsService'
 
-const store = createStore({
-  namespaced: true,
-
+export default createStore({
   state: {
-    errMsg: '',
+    errorMessage: '',
     self: null,
-    chatMessages: [
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      },
-      {
-        id: '64037bc46117a8fdc471c823',
-        username: 'ajsdoij',
-        text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasjdlk',
-      }
-    ],
+    currentRoomID: '',
+    chatMessages: [],
   },
 
   mutations: {
@@ -69,27 +17,44 @@ const store = createStore({
       }
 
       console.error('Unexpected Error', err)
-      state.errorMessage = 'Unexpected error, try again later.'
+      state.errorMessage = 'An unexpected error has accured.'
     },
     SET_SELF: (state, self) => (state.self = self),
+    SET_CURRENT_ROOM_ID: (state, roomID) => (state.currentRoomID = roomID),
+
     SET_WEBSOCKET: (state, ws) => (state.websocket = ws),
     ON_MESSAGE: (state, msg) => {
-      console.log(msg)
+      const data = JSON.parse(msg.data)
+
+      switch (data.type) {
+        case 'CHAT':
+          state.chatMessages.push({
+            userID: data.user_id,
+            username: data.username,
+            text: data.text,
+          })
+          break
+      }
     },
+    SEND_MESSAGE: (state, msg) =>
+      state.websocket.send(JSON.stringify(msg)),
   },
 
   actions: {
     handleError: ({ commit }, err) => commit('HANDLE_ERROR', err),
     setSelf: ({ commit }, self) => commit('SET_SELF', self),
+
     joinRoom: ({ commit }, roomID) => {
       const ws = RoomsService.joinRoom(roomID)
       ws.onerror = (err) => commit('HANDLE_ERROR', err)
       ws.onmessage = (msg) => commit('ON_MESSAGE', msg)
+      ws.onopen = (_) => commit('SET_CURRENT_ROOM_ID', roomID)
+      ws.onclose = (_) => commit('SET_CURRENT_ROOM_ID', '')
+
       commit('SET_WEBSOCKET', ws)
     },
+    sendMessage: ({ commit }, msg) => commit('SEND_MESSAGE', msg),
   },
 
   modules: {},
 })
-
-export default store

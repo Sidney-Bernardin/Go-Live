@@ -11,7 +11,6 @@ import { removeSessionID } from './utils'
 const store = useStore()
 
 const loading = ref(false)
-const videoElem = ref(null)
 
 provide('loading', loading)
 

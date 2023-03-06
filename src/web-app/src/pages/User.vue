@@ -1,12 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useStore } from 'vuex'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+
+import Stream from '../components/Stream.vue'
+import Chat from '../components/Chat.vue'
 
 import UsersService from '../services/UsersService'
+import RoomsService from '../services/RoomsService'
 
-const store = useStore()
 const router = useRouter()
+const store = useStore()
 
 const user = ref({
   id: '',
@@ -14,45 +18,45 @@ const user = ref({
   email: '',
 })
 
-const profilePictureSrc = (userID) => `${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${userID}/picture`
+const room = ref({
+  name: '',
+})
 
-UsersService.getUser(user.value.username, 'username', ['email'])
-  .then((res) => {
-    user.value.id = res.data.id
-    user.value.email = res.data.email
-  })
-  .catch((err) => store.dispatch('handleError', err))
+onMounted(async () => {
+  try {
+    const res1 = await UsersService.getUser(user.value.username, 'username')
+    user.value.id = res1.data.id
+    user.value.email = res1.data.email
 
-onMounted(() => {})
+    const res2 = await RoomsService.getRoom(user.value.id)
+    room.value.name = res2.data.name
+  } catch (err) {
+    if (err.response?.data.type == 'room_doesnt_exist') return
+    store.dispatch('handleError', err)
+    return
+  }
+
+  store.dispatch('joinRoom', user.value.id)
+})
 </script>
 
 <template>
   <div class="user-page">
+    <div class="room" v-if="room.name">
+      <h1>{{ room.name }}</h1>
 
-    <div class="room">
-      <h1>Room Name</h1>
+      <Stream v-if="store.state.currentRoomID" />
 
-      <video controls autoplay muted />
-
-      <div class="chat">
-        <ul>
-          <li v-for="(msg, idx) in store.state.chatMessages" :key="idx">
-            <button
-              :style="`background: url(${profilePictureSrc(msg.id)}) center/100%`"
-            ></button>
-
-            <p>{{ msg.text }}</p>
-          </li>
-        </ul>
-
-        <form>
-          <input type="text" placeholder="Hello, World!">
-          <input type="submit" value="SEND">
-        </form>
+      <div class="video-placeholder" v-else>
+        <h2>Couldn't join room</h2>
       </div>
+
+      <Chat />
     </div>
 
-    <div class="info"></div>
+    <div class="info">
+      {{ user.username }}
+    </div>
   </div>
 </template>
 
@@ -63,12 +67,13 @@ onMounted(() => {})
   gap: 10px;
   grid-template-columns: 1fr 1fr 1fr 250px;
   grid-template-rows: auto calc(100vh - 200px);
-  grid-template-areas: 
-    "header header header header"
-    "video video video chat";
+  grid-template-areas:
+    'header header header header'
+    'video video video chat';
   border: 1px solid #c1c1c1;
   border-style: dotted;
   padding: 10px;
+  margin-bottom: 15px;
 }
 
 .room h1 {
@@ -76,70 +81,30 @@ onMounted(() => {})
   margin: 0;
 }
 
-.room video {
+.room .stream {
   grid-area: video;
   width: 100%;
   max-height: 100%;
 }
 
-.room .chat {
-  position: relative;
+.room .video-placeholder {
   display: flex;
-  grid-area: chat;
+  grid-area: video;
   border: 2px solid #c1c1c1;
   border-style: dashed;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.room .chat form {
+.room .chat {
+  grid-area: chat;
+}
+
+.info {
   display: flex;
-  height: 20px;
-  margin: 0 5px 5px 5px;
-}
-
-.room .chat input[type=text] {
-  width: 75%;
-}
-
-.room .chat input[type=submit] {
-  width: 25%;
-}
-
-.room .chat ul {
-  height: 100%;
-  list-style-type: none;
-  margin: 0;
-  padding: 5px;
-  overflow-y: scroll;
-  overscroll-behavior-y: contain;
-  scroll-snap-type: y proximity;
-}
-
-.room .chat li {
-  display: flex;
-  gap: 5px;
-  border: 1px solid transparent;
-  border-style: dotted;
-  padding: 5px;
-}
-
-.room .chat li:hover {
+  gap: 10px;
   border: 1px solid #c1c1c1;
   border-style: dotted;
-}
-
-.room .chat li button {
-  width: 35px;
-  height: 35px;
-  border: 2px solid #c1c1c1;
-  border-style: inset;
-  padding: 0;
-}
-
-.room .chat p {
-  width: calc(100% - 40px);
-  margin: 0;
-  overflow-wrap: break-word;
-  justify-content: baseline;
+  padding: 10px;
 }
 </style>

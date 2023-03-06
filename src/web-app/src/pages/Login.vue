@@ -1,14 +1,15 @@
 <script setup>
 import { ref, reactive, inject } from 'vue'
-import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+
 import UsersService from '../services/UsersService'
 
 import axios from 'axios'
 import { setSessionID } from '../utils'
 
-const store = useStore()
 const router = useRouter()
+const store = useStore()
 
 const loading = inject('loading')
 

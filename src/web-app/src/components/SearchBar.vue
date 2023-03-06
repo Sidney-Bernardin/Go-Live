@@ -2,11 +2,11 @@
 import { ref } from 'vue'
 import UsersService from '../services/UsersService'
 
-const searchInput = ref('')
+const input = ref('')
 const results = ref([])
 
 const search = () =>
-  UsersService.searchUsers(searchInput.value, 0, 20, ['username'])
+  UsersService.searchUsers(input.value, 0, 20, ['username'])
     .then((res) => (results.value = res.data))
     .catch((err) => store.dispatch('handleError', err))
 </script>
@@ -17,7 +17,7 @@ const search = () =>
       type="text"
       placeholder="Search for Users"
       @input="search"
-      v-model="searchInput"
+      v-model="input"
     />
 
     <ul>

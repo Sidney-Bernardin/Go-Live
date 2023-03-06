@@ -1,24 +1,17 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
-import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
 import SearchBar from './SearchBar.vue'
-import UsersService from '../services/UsersService'
 
+import UsersService from '../services/UsersService'
 import { removeSessionID } from '../utils'
 
-const store = useStore()
 const router = useRouter()
+const store = useStore()
 
 const loading = inject('loading')
-
-const profilePictureSrc = computed(
-  () =>
-    `${import.meta.env.VITE_MICROSERVICES_URL}/users/all/${
-      store.state.self.id
-    }/picture`
-)
 
 const logout = async () => {
   loading.value = true
@@ -37,8 +30,8 @@ const logout = async () => {
 
 <template>
   <div class="navigation">
-    <p class="err-msg" v-if="store.state.errMsg">
-      ⚠ {{ store.state.errMsg }} ⚠
+    <p class="error-message" v-if="store.state.errorMessage">
+      ⚠ {{ store.state.errorMessage }} ⚠
     </p>
 
     <ul class="links">
@@ -50,7 +43,7 @@ const logout = async () => {
     <button
       v-if="store.state.self"
       class="profile-picture"
-      :style="`background: url(${profilePictureSrc}) center/100%`"
+      :style="`background: url(${UsersService.profilePictureSrc(store.state.self.id)}) center/100%`"
     ></button>
 
     <div class="dropdown" v-if="store.state.self">
@@ -83,15 +76,16 @@ const logout = async () => {
   align-items: center;
 }
 
-.err-msg {
+.error-message {
   position: absolute;
-  top: 67px;
+  top: 66px;
   width: 100%;
   color: red;
   font-size: 12px;
   font-weight: bolder;
   text-transform: uppercase;
   text-align: center;
+  line-height: 15px;
   margin: 0;
 }
 

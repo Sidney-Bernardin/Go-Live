@@ -9,9 +9,9 @@ services:
     volumes:
       - ./src/web-app:/app
     environment:
-      VITE_MICROSERVICES_URL: "http://localhost:8001"
-      VITE_RTMP_URL: "http://localhost:8002"
-      VITE_HLS_URL: "http://localhost:8003"
+      VITE_MICROSERVICES_URL: "localhost:8001"
+      VITE_RTMP_URL: "localhost:8002"
+      VITE_HLS_URL: "localhost:8003"
     ports:
       - 5173:5173
     command: ["npm", "run", "dev"]
