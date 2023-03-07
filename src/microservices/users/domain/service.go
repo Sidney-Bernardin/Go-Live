@@ -48,20 +48,18 @@ func (svc *service) Signup(info *SignupInfo) (string, error) {
 	fields := map[string]any{"username": info.Username, "email": info.Email}
 	if err := svc.databaseRepo.CheckForTakenUserFields(fields); err != nil {
 
-		// If err was caused by a problem-detail and has one of the following
-		// types, replace the problem-detail's type.
+		// If the error was caused by a problem-detail that has one of the
+		// following types, replace it's type.
 		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeFieldTaken) {
-			return "", ProblemDetail{
-				Type:   PDTypeInvalidSignupInfo,
-				Detail: pd.Detail,
-			}
+			pd.Type = PDTypeInvalidSignupInfo
+			return "", pd
 		}
 
 		return "", errors.Wrap(err, "cannot check for taken user fields")
 	}
 
 	// Hash the password.
-	hashed, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
+	hashedPasw, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
 	if err != nil {
 		return "", errors.Wrap(err, "cannot hash password")
 	}
@@ -70,7 +68,7 @@ func (svc *service) Signup(info *SignupInfo) (string, error) {
 	user := &User{
 		Username: info.Username,
 		Email:    info.Email,
-		Password: string(hashed),
+		Password: string(hashedPasw),
 	}
 
 	// Insert the user with a new session.
@@ -87,13 +85,12 @@ func (svc *service) Signin(info *SigninInfo) (string, error) {
 	user, err := svc.databaseRepo.GetUserByUsername(info.Username, "password")
 	if err != nil {
 
-		// If err was caused by a problem-detail and has one of the following
-		// types, replace the problem-detail.
+		// If the error was caused by a problem-detail that has one of the
+		// following types, replace it's type and detail.
 		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeUserDoesntExist) {
-			return "", ProblemDetail{
-				Type:   PDTypeInvalidSigninInfo,
-				Detail: "Incorrect username or password.",
-			}
+			pd.Type = PDTypeInvalidSigninInfo
+			pd.Detail = "Incorrect username or password."
+			return "", pd
 		}
 
 		return "", errors.Wrap(err, "cannot get user by username")
@@ -127,12 +124,11 @@ func (svc *service) Logout(sessionID string) error {
 	// Delete the session from the database.
 	err := svc.databaseRepo.DeleteSession(sessionID)
 
-	// If err was caused by a problem-detail and has one of the following types,
-	// replace the problem-detail.
+	// If the error was caused by a problem-detail that has one of the
+	// following types, replace it's type and detail.
 	if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID) {
-		return ProblemDetail{
-			Type: PDTypeUnauthorized,
-		}
+		pd.Type = PDTypeUnauthorized
+		return pd
 	}
 
 	return errors.Wrap(err, "cannot delete session")
@@ -140,12 +136,12 @@ func (svc *service) Logout(sessionID string) error {
 
 func (svc *service) GetUser(search, by string, fields ...string) (user *User, err error) {
 
-	// Remove password from the fields.
+	// Make sure the user's password isn't returned, by removing the password field.
 	if i := slices.Index(fields, "password"); i != -1 {
 		fields[i] = ""
 	}
 
-	// Get the user by it's ID or username.
+	// Get the user by ID or username.
 	switch by {
 	case "id":
 		user, err = svc.databaseRepo.GetUser(search, fields...)
@@ -158,12 +154,12 @@ func (svc *service) GetUser(search, by string, fields ...string) (user *User, er
 		}
 	}
 
-	return user, errors.Wrap(err, "cannot get user")
+	return user, errors.Wrapf(err, "cannot get user by %s", by)
 }
 
 func (svc *service) SearchUsers(username string, offset, limit int, fields ...string) ([]*User, error) {
 
-	// Remove password from the fields.
+	// Make sure the user passwords aren't returned, by removing the password field.
 	if i := slices.Index(fields, "password"); i != -1 {
 		fields[i] = ""
 	}
@@ -179,7 +175,7 @@ func (svc *service) SearchUsers(username string, offset, limit int, fields ...st
 
 func (svc *service) GetSelf(sessionID string, fields ...string) (*User, error) {
 
-	// Remove password from the fields.
+	// Make sure the user's password isn't returned, by removing the password field.
 	if i := slices.Index(fields, "password"); i != -1 {
 		fields[i] = ""
 	}
@@ -187,12 +183,11 @@ func (svc *service) GetSelf(sessionID string, fields ...string) (*User, error) {
 	// Get the session's user from the database.
 	user, err := svc.databaseRepo.GetSessionsUser(sessionID, fields...)
 
-	// If err was caused by a problem-detail and has one of the following types,
-	// replace the problem-detail.
+	// If the error was caused by a problem-detail that has one of the following
+	// types, replace it's type.
 	if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID, PDTypeSessionDoesntExist, PDTypeUserDoesntExist) {
-		return nil, ProblemDetail{
-			Type: PDTypeUnauthorized,
-		}
+		pd.Type = PDTypeUnauthorized
+		return nil, pd
 	}
 
 	return user, errors.Wrap(err, "cannot get sessions user")
@@ -204,12 +199,11 @@ func (svc *service) SetProfilePicture(sessionID string, profilePicture []byte) e
 	user, err := svc.databaseRepo.GetSessionsUser(sessionID)
 	if err != nil {
 
-		// If err was caused by a problem-detail and has one of the following
-		// types, replace the problem-detail.
+		// If the error was caused by a problem-detail that has one of the
+		// following types, replace it's type.
 		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID, PDTypeSessionDoesntExist, PDTypeUserDoesntExist) {
-			return ProblemDetail{
-				Type: PDTypeUnauthorized,
-			}
+			pd.Type = PDTypeUnauthorized
+			return pd
 		}
 
 		return errors.Wrap(err, "cannot get sessions user")

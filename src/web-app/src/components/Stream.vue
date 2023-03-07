@@ -9,6 +9,8 @@ const store = useStore()
 
 const videoElem = ref(null)
 
+const goLive = () => (videoElem.value.currentTime = videoElem.value.duration)
+
 onMounted(() => {
   if (!Hls.isSupported()) return
 
@@ -20,7 +22,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <video class="stream" controls muted ref="videoElem" />
+  <video class="stream" controls muted @play="goLive" ref="videoElem"></video>
 </template>
 
 <style scoped></style>

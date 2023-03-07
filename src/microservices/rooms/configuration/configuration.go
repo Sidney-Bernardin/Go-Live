@@ -11,9 +11,9 @@ type Configuration struct {
 	HTTPPort        int           `required:"true" split_words:"true"`
 	HTTPPongTimeout time.Duration `required:"true" split_words:"true"`
 
-	UsersGRPCAddr string `required:"true" split_words:"true"`
-	RedisAddr     string `required:"true" split_words:"true"`
-	RedisPassw    string `required:"true" split_words:"true"`
+	UsersGRPCUrl string `required:"true" split_words:"true"`
+	RedisURL     string `required:"true" split_words:"true"`
+	RedisPassw   string `required:"true" split_words:"true"`
 }
 
 // New returns a pointer to a Configuration populated by environment variables.

@@ -31,7 +31,7 @@ func main() {
 	// Create a configuration.
 	config, err := configuration.New("users")
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Cannot load configuration")
+		logger.Fatal().Stack().Err(err).Msg("Cannot create configuration")
 	}
 
 	// Create a mongo database repository.
@@ -48,7 +48,7 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	// Serve the apis.
+	// Serve an HTTP and GRPC API in seperate go-routines.
 	wg.Add(2)
 	go serveAPI(&wg, "HTTP", http.New(svc, &logger), config.HTTPPort, &logger)
 	go serveAPI(&wg, "GRPC", grpc.New(svc, &logger), config.GRPCPort, &logger)
@@ -59,11 +59,12 @@ func main() {
 		close(signalChan)
 	}()
 
-	// Stop until a signal is received or the channel closes.
+	// Block until a signal is received or the channel closes.
 	<-signalChan
 }
 
-// serveAPI decrements the wait-group after the API is done serving.
+// serveAPI decrements the given wait-group's counter by 1 after the given API
+// is done serving.
 func serveAPI(wg *sync.WaitGroup, name string, api API, port int, l *zerolog.Logger) {
 	defer wg.Done()
 

@@ -59,7 +59,7 @@ func (repo *databaseRepository) InsertUserWithSession(user *domain.User, session
 	db := repo.client.Database("users")
 	user.MongoID = primitive.NewObjectID()
 
-	// Insert the user and the session.
+	// Insert the user.
 	if _, err := db.Collection("users").InsertOne(context.Background(), user); err != nil {
 		return "", errors.Wrap(err, "cannot insert user")
 	}
@@ -74,12 +74,12 @@ func (repo *databaseRepository) InsertUserWithSession(user *domain.User, session
 
 func (repo *databaseRepository) GetUser(userIDHex string, fields ...string) (*domain.User, error) {
 
-	// Convert userIDHex into a primitive.ObjectID.
+	// Convert the user-ID into a primitive.ObjectID.
 	userID, err := repo.hexToObjID(userIDHex)
 	if err != nil {
 		return nil, domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The user ID isn't valid.",
+			Detail: "The given user-ID isn't valid.",
 		}
 	}
 
@@ -97,8 +97,7 @@ func (repo *databaseRepository) GetUser(userIDHex string, fields ...string) (*do
 		// Check if the user wasn't found.
 		if err == mongo.ErrNoDocuments {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeUserDoesntExist,
-				Detail: "Couldn't find a user with the same user ID.",
+				Type: domain.PDTypeUserDoesntExist,
 			}
 		}
 
@@ -156,8 +155,7 @@ func (repo *databaseRepository) GetUserByUsername(username string, fields ...str
 		// Check if the user wasn't found.
 		if err == mongo.ErrNoDocuments {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeUserDoesntExist,
-				Detail: "Couldn't find a user with the same username.",
+				Type: domain.PDTypeUserDoesntExist,
 			}
 		}
 
@@ -170,12 +168,12 @@ func (repo *databaseRepository) GetUserByUsername(username string, fields ...str
 
 func (repo *databaseRepository) GetSessionsUser(sessionIDHex string, projection ...string) (*domain.User, error) {
 
-	// Convert sessionIDHex into a primitive.ObjectID.
+	// Convert the session-ID into a primitive.ObjectID.
 	sessionID, err := repo.hexToObjID(sessionIDHex)
 	if err != nil {
 		return nil, domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The session ID isn't valid.",
+			Detail: "The given session-ID isn't valid.",
 		}
 	}
 
@@ -192,8 +190,7 @@ func (repo *databaseRepository) GetSessionsUser(sessionIDHex string, projection 
 		// Check if the session wasn't found.
 		if err == mongo.ErrNoDocuments {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeSessionDoesntExist,
-				Detail: "Couldn't find a session with the same session ID.",
+				Type: domain.PDTypeSessionDoesntExist,
 			}
 		}
 
@@ -214,8 +211,7 @@ func (repo *databaseRepository) GetSessionsUser(sessionIDHex string, projection 
 		// Check if the user wasn't found.
 		if err == mongo.ErrNoDocuments {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeUserDoesntExist,
-				Detail: "The session doesn't point to a user.",
+				Type: domain.PDTypeUserDoesntExist,
 			}
 		}
 
@@ -255,12 +251,12 @@ func (repo *databaseRepository) CheckForTakenUserFields(fields map[string]any) e
 
 func (repo *databaseRepository) InsertSession(session *domain.Session) (string, error) {
 
-	// Convert session.UserID into a primitive.ObjectID.
+	// Convert the session's user-ID into a primitive.ObjectID.
 	userID, err := repo.hexToObjID(session.UserID)
 	if err != nil {
 		return "", domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The user ID isn't valid.",
+			Detail: "The given user-ID isn't valid.",
 		}
 	}
 
@@ -276,12 +272,12 @@ func (repo *databaseRepository) InsertSession(session *domain.Session) (string, 
 
 func (repo *databaseRepository) DeleteSession(sessionIDHex string) error {
 
-	// Convert sessionIDHex into a primitive.ObjectID.
+	// Convert the session-ID into a primitive.ObjectID.
 	sessionID, err := repo.hexToObjID(sessionIDHex)
 	if err != nil {
 		return domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The session ID isn't valid.",
+			Detail: "The given session-ID isn't valid.",
 		}
 	}
 
@@ -299,7 +295,7 @@ func (repo *databaseRepository) InsertProfilePicture(userIDHex string, profilePi
 	if !primitive.IsValidObjectID(userIDHex) {
 		return domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The user ID isn't valid.",
+			Detail: "The given user-ID isn't valid.",
 		}
 	}
 
@@ -331,7 +327,7 @@ func (repo *databaseRepository) GetProfilePicture(userIDHex string) (*bytes.Buff
 	if !primitive.IsValidObjectID(userIDHex) {
 		return nil, domain.ProblemDetail{
 			Type:   domain.PDTypeInvalidID,
-			Detail: "The user ID isn't valid.",
+			Detail: "The given user-ID isn't valid.",
 		}
 	}
 
@@ -348,8 +344,7 @@ func (repo *databaseRepository) GetProfilePicture(userIDHex string) (*bytes.Buff
 	// Check if the profile-picture wasn't found.
 	if err == gridfs.ErrFileNotFound {
 		return nil, domain.ProblemDetail{
-			Type:   domain.PDTypeProfilePictureDoesntExist,
-			Detail: "Couldn't find a profile picture with the same user ID.",
+			Type: domain.PDTypeProfilePictureDoesntExist,
 		}
 	}
 

@@ -1,69 +1,46 @@
 package http
 
-import "reflect"
-
 func (a *api) doRoutes() {
 
 	a.router.HandleFunc(
 		"/",
-		a.adapt(a.handleIndex, a.logRequest()),
+		a.adapt(
+			a.handleIndex,
+			a.logRequest(),
+		),
 	)
 
 	a.router.HandleFunc(
-		"/all",
+		"/signup",
 		a.adapt(
-			a.handleSearchUsers,
+			a.handleSignup,
 			a.logRequest(),
-			a.getQueryParams(reflect.String, "username", "fields"),
-			a.getQueryParams(reflect.Int, "offset", "limit"),
 		),
-	).Methods("GET")
+	).Methods("POST")
 
 	a.router.HandleFunc(
-		"/all/{search}",
+		"/signin",
 		a.adapt(
-			a.handleGetUser,
+			a.handleSignin,
 			a.logRequest(),
-			a.getPathParams(reflect.String, "search"),
-			a.getQueryParams(reflect.String, "search_by", "fields"),
 		),
-	).Methods("GET")
-
-	a.router.HandleFunc(
-		"/all/{user_id}/picture",
-		a.adapt(
-			a.handleGetProfilePicture,
-			a.logRequest(),
-			a.getPathParams(reflect.String, "user_id"),
-		),
-	).Methods("GET")
+	).Methods("POST")
 
 	a.router.HandleFunc(
 		"/self",
 		a.adapt(
 			a.handleGetSelf,
 			a.logRequest(),
-			a.getAuthToken(),
-			a.getQueryParams(reflect.String, "fields"),
+			a.getBearerToken(),
 		),
 	).Methods("GET")
-
-	a.router.HandleFunc(
-		"/self/signup",
-		a.adapt(a.handleSignup, a.logRequest()),
-	).Methods("POST")
-
-	a.router.HandleFunc(
-		"/self/signin",
-		a.adapt(a.handleSignin, a.logRequest()),
-	).Methods("POST")
 
 	a.router.HandleFunc(
 		"/self/logout",
 		a.adapt(
 			a.handleLogout,
 			a.logRequest(),
-			a.getAuthToken(),
+			a.getBearerToken(),
 		),
 	).Methods("GET")
 
@@ -72,8 +49,32 @@ func (a *api) doRoutes() {
 		a.adapt(
 			a.handleSetProfilePicture,
 			a.logRequest(),
-			a.getAuthToken(),
+			a.getBearerToken(),
 			a.getFormFile("profile_picture", 10<<20),
 		),
 	).Methods("POST")
+
+	a.router.HandleFunc(
+		"/all",
+		a.adapt(
+			a.handleSearchUsers,
+			a.logRequest(),
+		),
+	).Methods("GET")
+
+	a.router.HandleFunc(
+		"/all/{search}",
+		a.adapt(
+			a.handleGetUser,
+			a.logRequest(),
+		),
+	).Methods("GET")
+
+	a.router.HandleFunc(
+		"/all/{user_id}/picture",
+		a.adapt(
+			a.handleGetProfilePicture,
+			a.logRequest(),
+		),
+	).Methods("GET")
 }

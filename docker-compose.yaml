@@ -82,8 +82,8 @@ services:
       ROOMS_HTTP_PORT: "8020"
       ROOMS_HTTP_PONG_TIMEOUT: "30s"
 
-      ROOMS_USERS_GRPC_ADDR: "users:8011"
-      ROOMS_REDIS_ADDR: "rooms_cache:6379"
+      ROOMS_USERS_GRPC_URL: "users:8011"
+      ROOMS_REDIS_URL: "rooms_cache:6379"
       ROOMS_REDIS_PASSW: ""
     ports:
       - 8020:8020

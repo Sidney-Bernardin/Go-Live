@@ -22,7 +22,6 @@ type api struct {
 	logger *zerolog.Logger
 }
 
-// New returns a new api.
 func New(svc domain.Service, l *zerolog.Logger) *api {
 	return &api{
 		service: svc,
@@ -34,10 +33,7 @@ func (a *api) Serve(port int) error {
 
 	// Create a GRPC server.
 	svr := grpc.NewServer()
-
-	// Register a to the server.
 	pb.RegisterUsersServer(svr, a)
-
 	reflection.Register(svr)
 
 	// Create a TCP listener for the server.
@@ -46,15 +42,15 @@ func (a *api) Serve(port int) error {
 		return errors.Wrap(err, "cannot create TCP listener")
 	}
 
-	// Serve the server with the listener.
+	// Serve the GRPC server with the listener.
 	err = svr.Serve(l)
 	return errors.Wrap(err, "cannot serve")
 }
 
-// newProblemDetailStatus return a new GRPC status contains the problem-detail.
+// newProblemDetailStatus returns a new GRPC status containing the problem-detail.
 func (a *api) newProblemDetailStatus(code codes.Code, pd domain.ProblemDetail) (*status.Status, error) {
 
-	// Create a GRPC status with details that contain err.
+	// Create a GRPC status with details that contain the problem-detail.
 	s, err2 := status.Newf(code, pd.Error()).WithDetails(&pb.ProblemDetail{
 		Type:   pd.Type,
 		Detail: pd.Detail,
@@ -68,19 +64,20 @@ func (a *api) GetSelf(ctx context.Context, req *pb.GetSelfRequest) (*pb.GetSelfR
 	user, err := a.service.GetSelf(req.GetSessionID(), req.GetFields()...)
 	if err != nil {
 
-		// Check if err was caused by a problem-detail.
+		// Check if the error was caused by a problem-detail.
 		problemDetail, ok := errors.Cause(err).(domain.ProblemDetail)
-		if !ok {
-			return nil, status.Newf(codes.Internal, err.Error()).Err()
+		if ok {
+
+			// Create a GRPC status that contains the problem-detail.
+			s, err2 := a.newProblemDetailStatus(codes.FailedPrecondition, problemDetail)
+			if err2 != nil {
+				return nil, status.Newf(codes.Internal, err2.Error()).Err()
+			}
+
+			return nil, s.Err()
 		}
 
-		// Create a GRPC status that contains the problem-detail.
-		s, err2 := a.newProblemDetailStatus(codes.FailedPrecondition, problemDetail)
-		if err2 != nil {
-			return nil, status.Newf(codes.Internal, err2.Error()).Err()
-		}
-
-		return nil, s.Err()
+		return nil, status.Newf(codes.Internal, err.Error()).Err()
 	}
 
 	return &pb.GetSelfResponse{

@@ -18,6 +18,8 @@ type Room struct {
 	Viewers map[string]*Viewer `json:"viewers"`
 }
 
-type RoomSettings struct {
-	Name string `json:"name"`
+type RoomInfo struct {
+	ID      string             `json:"id,omitempty"`
+	Name    string             `json:"name,omitempty"`
+	Viewers map[string]*Viewer `json:"viewers,omitempty"`
 }

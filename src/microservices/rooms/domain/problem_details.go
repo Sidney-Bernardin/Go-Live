@@ -1,14 +1,13 @@
 package domain
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
-	PDTypeInvalidInput = "invalid_input"
-	PDTypeInvalidID    = "invalid_id"
 	PDTypeUnauthorized = "unauthorized"
+
+	PDTypeInvalidInput = "invalid_input"
 	PDTypeBadStreamID  = "bad_stream_id"
+	PDTypeInvalidID    = "invalid_id"
 
 	PDTypeRoomDoesntExist   = "room_doesnt_exist"
 	PDTypeRoomAlreadyExists = "room_already_exists"

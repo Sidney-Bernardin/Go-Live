@@ -18,22 +18,22 @@ func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
-	roomSettings := &domain.RoomSettings{"No Name"}
+	roomInfo := &domain.RoomInfo{
+		Name: r.URL.Query().Get("name"),
+	}
 
-	if err := a.service.CreateRoom(r.FormValue("key"), r.FormValue("name"), roomSettings); err != nil {
+	if err := a.service.CreateRoom(r.FormValue("key"), r.FormValue("name"), roomInfo); err != nil {
 
-		// If err was caused by a problem-detail, respond with StatusBadRequest.
+		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
 			a.err(w, http.StatusBadRequest, pd)
 			return
 		}
 
-		// Respond with StatusInternalServerError.
 		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot create room"))
 		return
 	}
 
-	// Respond.
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -41,26 +41,22 @@ func (a *api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 
 	if err := a.service.DeleteRoom(r.FormValue("key")); err != nil {
 
-		// If err was caused by a problem-detail, respond with StatusBadRequest.
+		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
 			a.err(w, http.StatusBadRequest, pd)
 			return
 		}
 
-		// Respond with StatusInternalServerError.
 		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot delete room"))
 		return
 	}
 
-	// Respond.
 	w.WriteHeader(http.StatusOK)
 }
 
+// TODO: implement a way to authenticate streams.
 func (a *api) handleAuthenticateStream(w http.ResponseWriter, r *http.Request) {
-
 	_ = r.Header.Get("X-Original-Uri")
-
-	// Respond.
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -69,14 +65,13 @@ func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	room, err := a.service.GetRoom(mux.Vars(r)["room_id"])
 	if err != nil {
 
-		// If err was caused by a problem-detail, respond with StatusBadRequest.
+		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
 			a.err(w, http.StatusBadRequest, pd)
 			return
 		}
 
-		// Respond with StatusInternalServerError.
-		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot get video"))
+		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot get room"))
 		return
 	}
 
@@ -84,8 +79,6 @@ func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(room); err != nil {
-
-		// Respond with StatusInternalServerError.
 		a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot write response"))
 		return
 	}
@@ -111,13 +104,12 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	user, roomChan, err := a.service.JoinRoom(sessionID, roomID)
 	if err != nil {
 
-		// If err was caused by a problem-detail, close with AbnormalClosure.
+		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
 			a.wsCloseErr(conn, websocket.CloseAbnormalClosure, pd)
 			return
 		}
 
-		// Close with InternalServerErr.
 		a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot join room"))
 		return
 	}
@@ -155,7 +147,6 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					// Close with InternalServerErr.
 					a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot write to WebSocket connection"))
 					return
 				}
@@ -175,7 +166,6 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Close with InternalServerErr.
 			a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot listen to WebSocket connection"))
 			return
 		}
@@ -183,25 +173,21 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		// Decode the message.
 		var msg map[string]any
 		if err := json.Unmarshal(msgBytes, &msg); err != nil {
-
-			// Close with AbnormalClosure.
 			a.wsCloseErr(conn, websocket.CloseAbnormalClosure, domain.ProblemDetail{
-				Type:   PDTypeCannotProcessRequestData,
+				Type:   domain.PDTypeInvalidID,
 				Detail: fmt.Sprintf("Cannot decode message: '%v'", err),
 			})
-
 			return
 		}
 
 		if err := a.service.BroadcastMessage(user, roomID, msg); err != nil {
 
-			// If err was caused by a problem-detail, close with AbnormalClosure.
+			// Check if the error was caused by a problem-detail.
 			if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
 				a.wsCloseErr(conn, websocket.CloseAbnormalClosure, pd)
 				return
 			}
 
-			// Close with InternalServerErr.
 			a.wsCloseErr(conn, websocket.CloseInternalServerErr, errors.Wrap(err, "cannot broadcast message"))
 			return
 		}

@@ -20,41 +20,42 @@ func NewCacheRepository(config *configuration.Configuration) (domain.CacheReposi
 
 	// Connect to Redis.
 	client, err := rueidis.NewClient(rueidis.ClientOption{
-		InitAddress: []string{config.RedisAddr},
+		InitAddress: []string{config.RedisURL},
 	})
 
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to redis")
 	}
 
+	// Create an object-map for rooms.
 	roomsRepo := om.NewJSONRepository("rooms", domain.Room{}, client)
+
 	// err = roomsRepo.CreateIndex(context.Background(), func(schema om.FtCreateSchema) om.Completed {
 	// 	return schema.FieldName("$.name").Text().Build()
 	// })
 
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot create index for rooms")
-	}
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "cannot create index for rooms")
+	// }
 
 	return &cacheRepository{config, client, roomsRepo}, nil
 }
 
 func (repo *cacheRepository) InsertRoom(room *domain.Room) error {
 
-	// Create a copy of the room.
+	// Create a copy of the room with the rooms object-map.
 	newRoom := repo.roomsRepo.NewEntity()
 	newRoom.Key = room.Key
 	newRoom.Name = room.Name
 	newRoom.Viewers = room.Viewers
 
-	// Save the copy.
+	// Set the copy.
 	if err := repo.roomsRepo.Save(context.Background(), newRoom); err != nil {
 
 		// Check if the room already exists.
 		if err.Error() == "object version mismatched, please retry" {
 			return domain.ProblemDetail{
-				Type:   domain.PDTypeRoomAlreadyExists,
-				Detail: "Found a room with the same room-ID.",
+				Type: domain.PDTypeRoomAlreadyExists,
 			}
 		}
 
@@ -64,20 +65,27 @@ func (repo *cacheRepository) InsertRoom(room *domain.Room) error {
 	return nil
 }
 
-func (repo *cacheRepository) GetRoom(roomID string) (*domain.Room, error) {
+func (repo *cacheRepository) GetRoom(roomID string) (*domain.RoomInfo, error) {
 
 	// Get the room.
 	room, err := repo.roomsRepo.Fetch(context.Background(), roomID)
+	if err != nil {
 
-	// Check if the room wasn't found.
-	if rueidis.IsRedisNil(err) {
-		return nil, domain.ProblemDetail{
-			Type:   domain.PDTypeRoomDoesntExist,
-			Detail: "Couldn't find a room with the same room-ID.",
+		// Check if the room wasn't found.
+		if rueidis.IsRedisNil(err) {
+			return nil, domain.ProblemDetail{
+				Type: domain.PDTypeRoomDoesntExist,
+			}
 		}
+
+		return nil, errors.Wrap(err, "cannot fetch room")
 	}
 
-	return room, errors.Wrap(err, "cannot fetch room")
+	return &domain.RoomInfo{
+		ID:      room.Key,
+		Name:    room.Name,
+		Viewers: room.Viewers,
+	}, nil
 }
 
 func (repo *cacheRepository) DeleteRoom(roomID string) error {
@@ -102,16 +110,14 @@ func (repo *cacheRepository) InsertViewer(roomID string, viewer *domain.Viewer) 
 		// Check if the room wasn't found.
 		if err.Error() == "new objects must be created at the root" {
 			return domain.ProblemDetail{
-				Type:   domain.PDTypeViewerDoesntExist,
-				Detail: "Couldn't find a room with the same room-ID.",
+				Type: domain.PDTypeViewerDoesntExist,
 			}
 		}
 
 		// Check if the viewer already exists.
 		if rueidis.IsRedisNil(err) {
 			return domain.ProblemDetail{
-				Type:   domain.PDTypeViewerAlreadyExists,
-				Detail: "Found a viewer with the same viewer-ID.",
+				Type: domain.PDTypeViewerAlreadyExists,
 			}
 		}
 
@@ -135,16 +141,14 @@ func (repo *cacheRepository) GetViewer(roomID, userID string) (*domain.Viewer, e
 		// Check if the room wasn't found.
 		if err.Error() == "new objects must be created at the root" {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeRoomDoesntExist,
-				Detail: "Couldn't find a room with the same room-ID.",
+				Type: domain.PDTypeRoomDoesntExist,
 			}
 		}
 
 		// Check if the viewer wasn't found.
 		if rueidis.IsRedisNil(err) {
 			return nil, domain.ProblemDetail{
-				Type:   domain.PDTypeViewerDoesntExist,
-				Detail: "Couldn't find a viewer with the same user-ID in the room.",
+				Type: domain.PDTypeViewerDoesntExist,
 			}
 		}
 
@@ -167,16 +171,14 @@ func (repo *cacheRepository) DeleteViewer(roomID, userID string) error {
 		// Check if the room wasn't found.
 		if err.Error() == "new objects must be created at the root" {
 			return domain.ProblemDetail{
-				Type:   domain.PDTypeRoomDoesntExist,
-				Detail: "Couldn't find a room with the same room-ID.",
+				Type: domain.PDTypeRoomDoesntExist,
 			}
 		}
 
 		// Check if the viewer wasn't found.
 		if rueidis.IsRedisNil(err) {
 			return domain.ProblemDetail{
-				Type:   domain.PDTypeViewerDoesntExist,
-				Detail: "Couldn't find a viewer with the same user-ID in the room.",
+				Type: domain.PDTypeViewerDoesntExist,
 			}
 		}
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
 
 	"rooms/configuration"
 	"rooms/domain"
@@ -19,31 +18,12 @@ type usersClientRepository struct {
 func NewUsersClientRepository(config *configuration.Configuration) (domain.UsersClientRepository, error) {
 
 	// Connect to the users service.
-	conn, err := grpc.Dial(config.UsersGRPCAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(config.UsersGRPCUrl, grpc.WithInsecure())
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot dial users service")
 	}
 
 	return &usersClientRepository{pb.NewUsersClient(conn)}, nil
-}
-
-func (repo *usersClientRepository) getProblemDetail(err error) (domain.ProblemDetail, bool) {
-
-	s, ok := status.FromError(err)
-	if !ok {
-		return domain.ProblemDetail{}, false
-	}
-
-	for _, detail := range s.Details() {
-		if problemDetail, ok := detail.(*pb.ProblemDetail); ok {
-			return domain.ProblemDetail{
-				Type:   problemDetail.Type,
-				Detail: problemDetail.Detail,
-			}, true
-		}
-	}
-
-	return domain.ProblemDetail{}, false
 }
 
 func (repo *usersClientRepository) GetSelf(sessionID string, fields []string) (*domain.User, error) {
@@ -56,6 +36,7 @@ func (repo *usersClientRepository) GetSelf(sessionID string, fields []string) (*
 	res, err := repo.client.GetSelf(context.Background(), req)
 	if err != nil {
 
+		// Check if the error has a problem-detail.
 		if pd, ok := repo.getProblemDetail(err); ok {
 			return nil, pd
 		}
@@ -63,11 +44,9 @@ func (repo *usersClientRepository) GetSelf(sessionID string, fields []string) (*
 		return nil, errors.Wrap(err, "cannot get self")
 	}
 
-	user := &domain.User{
+	return &domain.User{
 		ID:       res.ID,
 		Username: res.Username,
 		Email:    res.Email,
-	}
-
-	return user, nil
+	}, nil
 }

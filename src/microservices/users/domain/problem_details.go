@@ -3,9 +3,10 @@ package domain
 import "fmt"
 
 const (
+	PDTypeUnauthorized = "unauthorized"
+
 	PDTypeInvalidInput = "invalid_input"
 	PDTypeInvalidID    = "invalid_id"
-	PDTypeUnauthorized = "unauthorized"
 
 	PDTypeFieldTaken = "field_taken"
 

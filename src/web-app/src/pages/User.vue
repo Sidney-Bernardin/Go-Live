@@ -19,6 +19,7 @@ const user = ref({
 })
 
 const room = ref({
+  id: '',
   name: '',
 })
 
@@ -29,6 +30,7 @@ onMounted(async () => {
     user.value.email = res1.data.email
 
     const res2 = await RoomsService.getRoom(user.value.id)
+    room.value.id = res2.data.id
     room.value.name = res2.data.name
   } catch (err) {
     if (err.response?.data.type == 'room_doesnt_exist') return
@@ -42,7 +44,7 @@ onMounted(async () => {
 
 <template>
   <div class="user-page">
-    <div class="room" v-if="room.name">
+    <div class="room" v-if="room.id">
       <h1>{{ room.name }}</h1>
 
       <Stream v-if="store.state.currentRoomID" />

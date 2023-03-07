@@ -15,9 +15,7 @@ import (
 )
 
 const (
-	PDTypeCannotProcessRequestData = "cannot_process_request_data"
-	PDTypeCannotUpgradeRequest     = "cannot_upgrade_request"
-	PDTypeInvalidCallback          = "invalid_callback"
+	PDTypeCannotUpgradeRequest = "cannot_upgrade_request"
 )
 
 type api struct {

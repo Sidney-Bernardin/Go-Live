@@ -35,3 +35,7 @@ type SigninInfo struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+type LoginResponse struct {
+	SessionID string `json:"session_id"`
+}

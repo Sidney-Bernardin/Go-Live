@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -24,23 +23,4 @@ func (a *api) err(w http.ResponseWriter, statusCode int, e error) {
 		err = errors.Wrap(err, "cannot write response to HTTP connection")
 		a.logger.Error().Stack().Err(err).Msg("Server Error")
 	}
-}
-
-// addDataToRequest returns r with the contents of newData added to r's context value.
-func (a *api) addDataToRequest(r *http.Request, newData map[string]any) *http.Request {
-
-	// Get request's current data from it's context value.
-	currentData, ok := r.Context().Value("data_from_middleware").(map[string]any)
-	if !ok {
-		currentData = map[string]any{}
-	}
-
-	// Add newData to currentData.
-	for k, v := range newData {
-		currentData[k] = v
-	}
-
-	// Update the requests context value with currentData.
-	ctx := context.WithValue(r.Context(), "data_from_middleware", currentData)
-	return r.WithContext(ctx)
 }

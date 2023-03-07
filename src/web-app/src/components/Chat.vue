@@ -11,7 +11,7 @@ const messageText = ref('')
 const chat = () =>
   store.dispatch('sendMessage', {
     type: 'CHAT',
-    text: chatMessageText.value,
+    text: messageText.value,
   })
 </script>
 
@@ -30,7 +30,7 @@ const chat = () =>
     </ul>
 
     <form v-if="store.state.currentRoomID" @submit.prevent="chat">
-      <input type="text" placeholder="Say hi!" v-model="chatMessageText" />
+      <input type="text" placeholder="Say hi!" v-model="messageText" />
       <input type="submit" value="SEND" />
     </form>
 
