@@ -25,7 +25,11 @@ const chat = () =>
           )}) center/100%`"
         ></button>
 
-        <p>{{ msg.text }}</p>
+        <p>
+          <router-link :to="msg.username">{{ msg.username }}</router-link>
+          <br />
+          {{ msg.text }}
+        </p>
       </li>
     </ul>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -40,6 +40,8 @@ onMounted(async () => {
 
   store.dispatch('joinRoom', user.value.id)
 })
+
+onUnmounted(() => store.dispatch('leaveRoom'))
 </script>
 
 <template>
