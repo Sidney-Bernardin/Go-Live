@@ -8,7 +8,10 @@ import HLSService from '../services/HLSService'
 const store = useStore()
 
 const videoElem = ref(null)
+const live = ref(false)
 
+const setLive = () =>
+  (live.value = videoElem.value?.currentTime > videoElem.value?.duration - 10)
 const goLive = () => (videoElem.value.currentTime = videoElem.value.duration)
 
 onMounted(() => {
@@ -22,7 +25,48 @@ onMounted(() => {
 </script>
 
 <template>
-  <video class="stream" controls muted @play="goLive" ref="videoElem"></video>
+  <div class="stream">
+    <video controls muted @timeupdate="setLive" ref="videoElem" />
+
+    <div class="controls">
+      <button v-if="live" @click="goLive">🔴 live</button>
+      <button v-else @click="goLive">⚫ live</button>
+    </div>
+  </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.stream {
+  position: relative;
+  background-color: #000;
+}
+
+.stream:hover .controls {
+  opacity: 1;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+}
+
+.controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  padding: 15px;
+  transition: 0.2s;
+}
+
+.controls * {
+  pointer-events: auto;
+}
+
+button {
+  text-transform: uppercase;
+}
+</style>
