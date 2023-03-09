@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 import SearchBar from './SearchBar.vue'
+import ProfilePicture from './ProfilePicture.vue'
 
 import UsersService from '../services/UsersService'
 import { removeSessionID } from '../utils'
@@ -12,6 +13,7 @@ const router = useRouter()
 const store = useStore()
 
 const loading = inject('loading')
+const showURICreator = inject('show_URI_creator')
 
 const logout = async () => {
   loading.value = true
@@ -40,11 +42,7 @@ const logout = async () => {
 
     <SearchBar v-if="store.state.self" />
 
-    <button
-      v-if="store.state.self"
-      class="profile-picture"
-      :style="`background: url(${UsersService.profilePictureSrc(store.state.self.id)}) center/100%`"
-    ></button>
+    <ProfilePicture v-if="store.state.self" :userID="store.state.self.id" />
 
     <div class="dropdown" v-if="store.state.self">
       <ul>
@@ -54,6 +52,7 @@ const logout = async () => {
       </ul>
 
       <ul>
+        <li><button @click="showURICreator = true">Go Live</button></li>
         <li><button @click="logout">Logout</button></li>
       </ul>
     </div>
@@ -71,7 +70,7 @@ const logout = async () => {
   height: 60px;
   border-bottom: 6px solid #c1c1c1;
   border-bottom-style: double;
-  background-color: #fff;
+  background: #fff;
   justify-content: space-between;
   align-items: center;
 }
@@ -98,13 +97,8 @@ ul.links {
   padding: 0;
 }
 
-button.profile-picture {
-  width: 45px;
-  height: 45px;
-  border: 3px solid #c1c1c1;
-  border-style: inset;
+.profile-picture {
   margin-right: 6px;
-  padding: 0;
 }
 
 .dropdown {
@@ -116,13 +110,13 @@ button.profile-picture {
   border-style: double;
   border-right: none;
   gap: 30px;
-  background-color: #fff;
+  background: #fff;
   padding: 10px;
   flex-direction: column;
   justify-content: space-between;
 }
 
-button.profile-picture:focus + .dropdown,
+.profile-picture:focus + .dropdown,
 .dropdown:hover {
   display: flex;
 }

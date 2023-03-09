@@ -2,7 +2,7 @@ package domain
 
 type CacheRepository interface {
 	InsertRoom(room *Room) error
-	GetRoom(roomID string) (*RoomInfo, error)
+	GetRoom(roomID string) (*Room, error)
 	DeleteRoom(roomID string) error
 
 	InsertViewer(roomID string, viewer *Viewer) error

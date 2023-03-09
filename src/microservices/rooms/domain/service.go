@@ -9,8 +9,8 @@ import (
 )
 
 type Service interface {
-	CreateRoom(sessionID, streamName string, settings *RoomInfo) error
-	GetRoom(roomID string) (*RoomInfo, error)
+	CreateRoom(streamName string, roomKey *RoomKey) error
+	GetRoom(roomID string) (*Room, error)
 	JoinRoom(sessionID, roomID string) (*User, <-chan map[string]any, error)
 	LeaveRoom(userID, roomID string) error
 	DeleteRoom(sessionID string) error
@@ -42,9 +42,9 @@ func NewService(
 	}
 }
 
-func (svc *service) CreateRoom(sessionID, streamName string, settings *RoomInfo) error {
+func (svc *service) CreateRoom(streamName string, roomKey *RoomKey) error {
 
-	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
+	user, err := svc.usersClientRepo.GetSelf(roomKey.SessionID, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot get self")
 	}
@@ -53,14 +53,14 @@ func (svc *service) CreateRoom(sessionID, streamName string, settings *RoomInfo)
 	if user.ID != streamName {
 		return ProblemDetail{
 			Type:   PDTypeBadStreamID,
-			Detail: "Your stream-name and user-ID dont't match.",
+			Detail: "Your stream-name and user-ID must match.",
 		}
 	}
 
 	// Create a room.
 	room := &Room{
-		Key:     user.ID,
-		Name:    settings.Name,
+		ID:      user.ID,
+		Name:    roomKey.RoomSettings.Name,
 		Viewers: map[string]*Viewer{},
 	}
 
@@ -77,7 +77,7 @@ func (svc *service) CreateRoom(sessionID, streamName string, settings *RoomInfo)
 	return nil
 }
 
-func (svc *service) GetRoom(roomID string) (*RoomInfo, error) {
+func (svc *service) GetRoom(roomID string) (*Room, error) {
 
 	// Get the room from the cache.
 	room, err := svc.cacheRepo.GetRoom(roomID)

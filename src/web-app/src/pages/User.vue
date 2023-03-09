@@ -5,6 +5,7 @@ import { useStore } from 'vuex'
 
 import Stream from '../components/Stream.vue'
 import Chat from '../components/Chat.vue'
+import ProfilePicture from '../components/ProfilePicture.vue'
 
 import UsersService from '../services/UsersService'
 import RoomsService from '../services/RoomsService'
@@ -14,7 +15,7 @@ const store = useStore()
 
 const user = ref({
   id: '',
-  username: router.currentRoute.value.params.username,
+  username: '',
   email: '',
 })
 
@@ -25,8 +26,13 @@ const room = ref({
 
 onMounted(async () => {
   try {
-    const res1 = await UsersService.getUser(user.value.username, 'username')
+    const res1 = await UsersService.getUser(
+      router.currentRoute.value.params.username,
+      'username',
+      ['username', 'email']
+    )
     user.value.id = res1.data.id
+    user.value.username = res1.data.username
     user.value.email = res1.data.email
 
     const res2 = await RoomsService.getRoom(user.value.id)
@@ -34,6 +40,9 @@ onMounted(async () => {
     room.value.name = res2.data.name
   } catch (err) {
     if (err.response?.data.type == 'room_doesnt_exist') return
+    if (err.response?.data.type == 'user_doesnt_exist')
+      err = "User doesn't exixt."
+
     store.dispatch('handleError', err)
     return
   }
@@ -58,8 +67,9 @@ onUnmounted(() => store.dispatch('leaveRoom'))
       <Chat />
     </div>
 
-    <div class="info">
-      {{ user.username }}
+    <div class="info" v-if="user.id">
+      <ProfilePicture :userID="user.id" />
+      {{ user.username }} - {{ user.email }}
     </div>
   </div>
 </template>
@@ -70,7 +80,7 @@ onUnmounted(() => store.dispatch('leaveRoom'))
   display: grid;
   gap: 10px;
   grid-template-columns: 1fr 1fr 1fr 250px;
-  grid-template-rows: auto calc(100vh - 200px);
+  grid-template-rows: auto calc(100vh - 250px);
   grid-template-areas:
     'header header header header'
     'video video video chat';
@@ -82,6 +92,8 @@ onUnmounted(() => store.dispatch('leaveRoom'))
 
 .room h1 {
   grid-area: header;
+  height: 40px;
+  line-height: 40px;
   margin: 0;
 }
 
@@ -110,5 +122,6 @@ onUnmounted(() => store.dispatch('leaveRoom'))
   border: 1px solid #c1c1c1;
   border-style: dotted;
   padding: 10px;
+  align-items: center;
 }
 </style>

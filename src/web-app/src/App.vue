@@ -3,6 +3,7 @@ import { ref, provide, onMounted } from 'vue'
 import { useStore } from 'vuex'
 
 import Loader from './components/Loader.vue'
+import URICreator from './components/URICreator.vue'
 import Navigation from './components/Navigtion.vue'
 
 import UsersService from './services/UsersService'
@@ -11,8 +12,10 @@ import { removeSessionID } from './utils'
 const store = useStore()
 
 const loading = ref(false)
+const showURICreator = ref(false)
 
 provide('loading', loading)
+provide('show_URI_creator', showURICreator)
 
 UsersService.getSelf(['username'])
   .then((res) => store.dispatch('setSelf', res.data))
@@ -36,6 +39,7 @@ UsersService.getSelf(['username'])
     </div>
 
     <Loader v-if="loading" />
+    <URICreator v-if="showURICreator" />
   </div>
 </template>
 

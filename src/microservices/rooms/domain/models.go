@@ -11,6 +11,7 @@ type Viewer struct {
 }
 
 type Room struct {
+	ID  string `json:"id,omitempty"`
 	Key string `json:"key" redis:",key"`
 	Ver int64  `json:"ver" redis:",ver"`
 
@@ -18,8 +19,9 @@ type Room struct {
 	Viewers map[string]*Viewer `json:"viewers"`
 }
 
-type RoomInfo struct {
-	ID      string             `json:"id,omitempty"`
-	Name    string             `json:"name,omitempty"`
-	Viewers map[string]*Viewer `json:"viewers,omitempty"`
+type RoomKey struct {
+	SessionID    string `json:"session_id"`
+	RoomSettings struct {
+		Name string `json:"name"`
+	} `json:"room_settings"`
 }

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useStore } from 'vuex'
 
+import ProfilePicture from './ProfilePicture.vue'
 import UsersService from '../services/UsersService'
 
 const store = useStore()
@@ -19,11 +20,8 @@ const chat = () =>
   <div class="chat">
     <ul>
       <li v-for="(msg, idx) in store.state.chatMessages" :key="idx">
-        <button
-          :style="`background: url(${UsersService.profilePictureSrc(
-            msg.userID
-          )}) center/100%`"
-        ></button>
+
+        <ProfilePicture :userID="msg.userID"/>
 
         <p>
           <router-link :to="msg.username">{{ msg.username }}</router-link>
@@ -34,12 +32,12 @@ const chat = () =>
     </ul>
 
     <form v-if="store.state.currentRoomID" @submit.prevent="chat">
-      <input type="text" placeholder="Say hi!" v-model="messageText" />
+      <input type="text" placeholder="Say Hello!" v-model="messageText" />
       <input type="submit" value="SEND" />
     </form>
 
     <form v-else>
-      <input type="text" placeholder="Say hi!" disabled />
+      <input type="text" placeholder="Say Hello!" disabled />
       <input type="submit" value="SEND" disabled />
     </form>
   </div>
@@ -91,12 +89,11 @@ li:hover {
   border-style: dotted;
 }
 
-li button {
+.profile-picture {
   width: 35px;
   height: 35px;
   border: 2px solid #c1c1c1;
   border-style: inset;
-  padding: 0;
 }
 
 p {

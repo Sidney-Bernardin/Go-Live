@@ -45,7 +45,7 @@ func (repo *cacheRepository) InsertRoom(room *domain.Room) error {
 
 	// Create a copy of the room with the rooms object-map.
 	newRoom := repo.roomsRepo.NewEntity()
-	newRoom.Key = room.Key
+	newRoom.Key = room.ID
 	newRoom.Name = room.Name
 	newRoom.Viewers = room.Viewers
 
@@ -65,7 +65,7 @@ func (repo *cacheRepository) InsertRoom(room *domain.Room) error {
 	return nil
 }
 
-func (repo *cacheRepository) GetRoom(roomID string) (*domain.RoomInfo, error) {
+func (repo *cacheRepository) GetRoom(roomID string) (*domain.Room, error) {
 
 	// Get the room.
 	room, err := repo.roomsRepo.Fetch(context.Background(), roomID)
@@ -81,7 +81,7 @@ func (repo *cacheRepository) GetRoom(roomID string) (*domain.RoomInfo, error) {
 		return nil, errors.Wrap(err, "cannot fetch room")
 	}
 
-	return &domain.RoomInfo{
+	return &domain.Room{
 		ID:      room.Key,
 		Name:    room.Name,
 		Viewers: room.Viewers,

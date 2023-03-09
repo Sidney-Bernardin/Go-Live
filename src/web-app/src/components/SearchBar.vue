@@ -32,7 +32,7 @@ const search = () =>
 .search-bar {
   position: relative;
   display: flex;
-  background-color: #fff;
+  background: #fff;
   flex-direction: column;
   align-items: center;
 }

@@ -24,7 +24,7 @@ export default createStore({
     SET_CURRENT_ROOM_ID: (state, roomID) => (state.currentRoomID = roomID),
 
     SET_WEBSOCKET: (state, ws) => {
-      if (ws == null) state.websocket.close(1000)
+      if (ws == null) state.websocket?.close(1000)
       state.websocket = ws
     },
     ON_MESSAGE: (state, msg) => {

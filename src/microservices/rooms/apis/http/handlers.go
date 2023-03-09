@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"rooms/domain"
 	"strings"
 
@@ -18,11 +19,27 @@ func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
-	roomInfo := &domain.RoomInfo{
-		Name: r.URL.Query().Get("name"),
+	// Get the room-key from the request.
+	roomKeyStr, err := url.QueryUnescape(r.FormValue("key"))
+	if err != nil {
+		a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
+			Type:   domain.PDTypeInvalidInput,
+			Detail: fmt.Sprintf("Cannot decode key: '%v'", err),
+		})
+		return
 	}
 
-	if err := a.service.CreateRoom(r.FormValue("key"), r.FormValue("name"), roomInfo); err != nil {
+	// Decode the room-key.
+	var roomKey *domain.RoomKey
+	if err := json.Unmarshal([]byte(roomKeyStr), &roomKey); err != nil {
+		a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
+			Type:   domain.PDTypeInvalidInput,
+			Detail: fmt.Sprintf("Cannot decode key: '%v'", err),
+		})
+		return
+	}
+
+	if err := a.service.CreateRoom(r.FormValue("name"), roomKey); err != nil {
 
 		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {
@@ -39,7 +56,27 @@ func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 
-	if err := a.service.DeleteRoom(r.FormValue("key")); err != nil {
+	// Get the room-key from the request.
+	roomKeyStr, err := url.QueryUnescape(r.FormValue("key"))
+	if err != nil {
+		a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
+			Type:   domain.PDTypeInvalidInput,
+			Detail: fmt.Sprintf("Cannot decode key: '%v'", err),
+		})
+		return
+	}
+
+	// Decode the room-key.
+	var roomKey *domain.RoomKey
+	if err := json.Unmarshal([]byte(roomKeyStr), &roomKey); err != nil {
+		a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
+			Type:   domain.PDTypeInvalidInput,
+			Detail: fmt.Sprintf("Cannot decode key: '%v'", err),
+		})
+		return
+	}
+
+	if err := a.service.DeleteRoom(roomKey.SessionID); err != nil {
 
 		// Check if the error was caused by a problem-detail.
 		if pd, ok := errors.Cause(err).(domain.ProblemDetail); ok {

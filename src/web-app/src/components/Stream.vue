@@ -12,13 +12,14 @@ const live = ref(false)
 
 const setLive = () =>
   (live.value = videoElem.value?.currentTime > videoElem.value?.duration - 10)
-const goLive = () => (videoElem.value.currentTime = videoElem.value.duration)
+const goLive = () =>
+  (videoElem.value.currentTime = videoElem.value.duration - 1)
 
 onMounted(() => {
   if (!Hls.isSupported()) return
 
   var hls = new Hls({ debug: true })
-  hls.loadSource(HLSService.hlsSrc(store.state.currentRoomID))
+  hls.loadSource(HLSService.hlsURI(store.state.currentRoomID))
   hls.attachMedia(videoElem.value)
   hls.on(Hls.Events.MANIFEST_PARSED, () => videoElem.value?.play())
 })
@@ -38,7 +39,7 @@ onMounted(() => {
 <style scoped>
 .stream {
   position: relative;
-  background-color: #000;
+  background: #000;
 }
 
 .stream:hover .controls {
