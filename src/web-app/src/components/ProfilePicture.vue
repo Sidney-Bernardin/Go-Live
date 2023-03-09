@@ -7,9 +7,9 @@ const props = defineProps({ userID: '' })
 <template>
   <button
     class="profile-picture"
-    :style="`background: url(${UsersService.profilePictureSrc(
+    :style="`background-image: url(${UsersService.profilePictureSrc(
       props.userID
-    )}) center/100%`"
+    )})`"
   ></button>
 </template>
 
@@ -19,6 +19,7 @@ const props = defineProps({ userID: '' })
   height: 45px;
   border: 3px solid #c1c1c1;
   border-style: inset;
+  background-size: 100% 100%;
   padding: 0;
 }
 </style>

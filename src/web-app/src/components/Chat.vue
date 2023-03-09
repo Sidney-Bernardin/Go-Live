@@ -20,8 +20,7 @@ const chat = () =>
   <div class="chat">
     <ul>
       <li v-for="(msg, idx) in store.state.chatMessages" :key="idx">
-
-        <ProfilePicture :userID="msg.userID"/>
+        <ProfilePicture :userID="msg.userID" />
 
         <p>
           <router-link :to="msg.username">{{ msg.username }}</router-link>
@@ -63,6 +62,7 @@ input[type='text'] {
 }
 
 input[type='submit'] {
+  cursor: pointer;
   width: 25%;
 }
 

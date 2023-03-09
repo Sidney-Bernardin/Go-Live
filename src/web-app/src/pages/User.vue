@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -24,7 +24,13 @@ const room = ref({
   name: '',
 })
 
-onMounted(async () => {
+const setProfilePicture = (profilePicture) => UsersService.setProfilePicture(profilePicture)
+  .then((res) => alert('Updated!'))
+  .catch((err) => store.dispatch('handleError', err))
+
+watch(router.currentRoute, async () => {
+  store.dispatch('leaveRoom')
+
   try {
     const res1 = await UsersService.getUser(
       router.currentRoute.value.params.username,
@@ -48,7 +54,7 @@ onMounted(async () => {
   }
 
   store.dispatch('joinRoom', user.value.id)
-})
+}, {immediate: true})
 
 onUnmounted(() => store.dispatch('leaveRoom'))
 </script>
@@ -68,7 +74,18 @@ onUnmounted(() => store.dispatch('leaveRoom'))
     </div>
 
     <div class="info" v-if="user.id">
-      <ProfilePicture :userID="user.id" />
+      <label v-if="store.state.self?.id == user.id">
+        <input
+          type="file"
+          id="profile-picture"
+          @change="(e) => setProfilePicture(e.target.files[0])"
+        />
+
+        <img :src="UsersService.profilePictureSrc(user?.id)" />
+      </label>
+
+      <ProfilePicture v-else :userID="user.id" />
+
       {{ user.username }} - {{ user.email }}
     </div>
   </div>
@@ -123,5 +140,23 @@ onUnmounted(() => store.dispatch('leaveRoom'))
   border-style: dotted;
   padding: 10px;
   align-items: center;
+}
+
+.info label {
+  position: relative;
+  cursor: pointer;
+  width: 51px;
+  height: 51px;
+}
+
+.info input[type='file'] {
+  display: none;
+}
+
+.info img {
+  width: 45px;
+  height: 45px;
+  border: 3px solid #c1c1c1;
+  border-style: inset;
 }
 </style>

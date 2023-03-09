@@ -98,6 +98,7 @@ ul.links {
 }
 
 .profile-picture {
+  cursor: pointer;
   margin-right: 6px;
 }
 
@@ -131,6 +132,7 @@ ul.links {
 }
 
 .dropdown ul button {
+  cursor: pointer;
   width: 100%;
 }
 </style>

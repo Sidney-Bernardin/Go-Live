@@ -68,6 +68,7 @@ video {
 }
 
 button {
+  cursor: pointer;
   text-transform: uppercase;
 }
 </style>
