@@ -20,8 +20,8 @@ services:
       - revers_proxy
       - rtmp
         
-  web_app_live_update:
-    container_name: web_app_live_update
+  web_app_volumed:
+    container_name: web_app_volumed
     build:
       context: ./src/web-app
       dockerfile: Dockerfile.dev
@@ -35,8 +35,7 @@ services:
       - 5173:5173
     command: npm run dev
     profiles:
-      - web_app
-      - live_update
+      - web_app_volumed
     depends_on:
       - revers_proxy
       - rtmp
