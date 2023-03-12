@@ -7,6 +7,24 @@ services:
     build:
       context: ./src/web-app
       dockerfile: Dockerfile.dev
+    environment:
+      VITE_MICROSERVICES_URL: "localhost:8001"
+      VITE_RTMP_URL: "localhost:8002"
+      VITE_HLS_URL: "localhost:8003"
+    ports:
+      - 5173:5173
+    command: npm run dev
+    profiles:
+      - web_app
+    depends_on:
+      - revers_proxy
+      - rtmp
+        
+  web_app_live_update:
+    container_name: web_app_live_update
+    build:
+      context: ./src/web-app
+      dockerfile: Dockerfile.dev
     volumes:
       - ./src/web-app:/app
     environment:
@@ -16,6 +34,9 @@ services:
     ports:
       - 5173:5173
     command: npm run dev
+    profiles:
+      - web_app
+      - live_update
     depends_on:
       - revers_proxy
       - rtmp
