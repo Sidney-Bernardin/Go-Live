@@ -3,7 +3,6 @@ import { ref, computed, inject } from 'vue'
 import { useStore } from 'vuex'
 
 import RTMPService from '../services/RTMPService'
-
 import { getSessionID } from '../utils'
 
 const store = useStore()
@@ -14,9 +13,8 @@ const uriInfo = ref({
   name: store.state.self.username + "'s Room",
 })
 
-const uri = computed(() =>
-  RTMPService.liveURI(store.state.self.id, uriInfo.value.name)
-)
+const uri = computed(() => RTMPService.liveURI(store.state.self.id))
+const key = computed(() => RTMPService.liveKey(uriInfo.value.name))
 </script>
 
 <template>
@@ -24,14 +22,25 @@ const uri = computed(() =>
     <div class="overlay" @click="showURICreator = false"></div>
 
     <div class="main">
-      <h1>{{ uri }}</h1>
+
+      <div class="output">
+        <div class="uri">
+          <h3>URI:</h3>
+          <p>{{ uri }}</p>
+        </div>
+
+        <div class="key">
+          <h3>KEY:</h3>
+          <p>{{ key }}</p>
+        </div>
+      </div>
 
       <p>
         Fill out the settings for your room, then begin streaming with the above
-        URI.
+        URI and key.
       </p>
 
-      <form action="">
+      <form @submit.prevent>
         <h2>Room Settings</h2>
 
         <label for="name">Name</label>
@@ -81,15 +90,29 @@ const uri = computed(() =>
   align-items: center;
 }
 
-h1 {
-  width: 100%;
+.output {
+  width: 350px;
+  border: 2px solid #c1c1c1;
+  border-style: dotted;
+  padding: 10px;
+}
+
+.output h3 {
   margin: 0;
-  overflow: auto;
+}
+
+.output p {
+  margin: 0;
+  overflow: scroll;
+}
+
+.output div {
+  display: flex;
+  gap: 10px;
 }
 
 p {
   width: 300px;
-  margin: 0;
   text-align: center;
 }
 
