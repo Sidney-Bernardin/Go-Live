@@ -10,6 +10,7 @@ Go Live is an [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based liv
 * Text chat for every room.
 * Users being able to set thier own profile pictures.
 * Rewindable streams up to 5 minutes behind.
+* Text searching users.
 
 For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io/project/?id=go_live).
 
