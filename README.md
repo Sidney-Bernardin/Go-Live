@@ -15,14 +15,14 @@ Go Live is an [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based liv
 For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io/project/?id=go_live).
 
 ## Usage
-Running Go-Live locally on your machine is as simple as clonning this repository.
+Running Go Live locally on your machine is as simple as clonning this repository.
 
 ``` bash
 git clone https://github.com/Sidney-Bernardin/Go-Live.git
 cd Go-Live
 ```
 
-Then using docker to spin-up Go-Live's various services.
+Then using docker to spin-up Go Live's various services.
 
 ``` bash
 # The "--profile web_app" spins-up an isolated/volume-less version of the web_app service's container.
