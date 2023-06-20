@@ -15,7 +15,9 @@ Go Live is an [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based liv
 For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io/project/?id=go_live).
 
 ## Usage
-Running Go Live locally on your machine is as simple as clonning this repository.
+
+### Running in Development Mode
+Running Go Live locally on your machine is as simple as cloning this repository.
 
 ``` bash
 git clone https://github.com/Sidney-Bernardin/Go-Live.git
@@ -28,3 +30,24 @@ Then using docker to spin-up Go Live's various services.
 # The "--profile web_app" spins-up an isolated/volume-less version of the web_app service's container.
 docker compose --profile web_app up --build
 ```
+
+### Using the Web-App
+When you first open the web-app, you'll be greeted with a login page.
+<div align=center>
+  <img src="./images/image1.png" width="75%" />
+</div>
+
+After creating an account, you can live stream by clicking your profile button, then the Go Live button.
+<div align=center>
+  <img src="./images/image2.png" />
+</div>
+
+A popup will appear and after naming your room, you'll be given a URI and key to use in OBS (or your prefered streaming software).
+<div align=center>
+  <img src="./images/image3.png" width="75%" />
+</div>
+
+Finally, you and other users can visit your profile to join the stream.
+<div align=center>
+  <img src="./images/image4.png" width="75%" />
+</div>
