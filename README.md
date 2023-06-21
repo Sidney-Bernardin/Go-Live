@@ -16,7 +16,7 @@ For more on how this project works, visit my [portfolio](https://sidney-bernardi
 
 ## Usage
 
-### Running in Development Mode
+### Running Locally
 Running Go Live locally on your machine is as simple as cloning this repository.
 
 ``` bash
