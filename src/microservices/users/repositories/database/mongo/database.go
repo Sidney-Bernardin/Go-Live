@@ -68,7 +68,7 @@ func (repo *databaseRepository) InsertUserWithSession(user *domain.User, session
 	session.MongoUserID = user.MongoID
 
 	// Insert the session.
-	_, err := db.Collection("sessions").InsertOne(context.Background(), user)
+	_, err := db.Collection("sessions").InsertOne(context.Background(), session)
 	return session.MongoID.Hex(), errors.Wrap(err, "cannot insert session")
 }
 
