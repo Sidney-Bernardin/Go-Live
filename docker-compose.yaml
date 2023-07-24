@@ -5,70 +5,48 @@ services:
   web_app:
     container_name: web_app
     build:
-      context: ./src/web-app
-      dockerfile: Dockerfile.dev
-    environment:
-      VITE_MICROSERVICES_URL: "localhost:8001"
-      VITE_RTMP_URL: "localhost:8002"
-      VITE_HLS_URL: "localhost:8003"
-    ports:
-      - 5173:5173
-    command: npm run dev
-    profiles:
-      - web_app
-    depends_on:
-      - revers_proxy
-      - rtmp
-        
-  web_app_volumed:
-    container_name: web_app_volumed
-    build:
-      context: ./src/web-app
+      context: ./services/web-app
       dockerfile: Dockerfile.dev
     volumes:
-      - ./src/web-app:/app
+      - ./services/web-app:/app
     environment:
-      VITE_MICROSERVICES_URL: "localhost:8001"
-      VITE_RTMP_URL: "localhost:8002"
-      VITE_HLS_URL: "localhost:8003"
+      VITE_RTMP_URL: "localhost:3010"
+      VITE_HLS_URL: "localhost:3011"
+      VITE_USERS_URL: "localhost:8000/users"
+      VITE_ROOMS_URL: "localhost:8000/rooms"
     ports:
-      - 5173:5173
+      - 3000:3000
     command: npm run dev
-    profiles:
-      - web_app_volumed
     depends_on:
-      - revers_proxy
       - rtmp
+
+  rtmp:
+    container_name: rtmp
+    build: ./services/rtmp
+    volumes:
+      - ./services/rtmp/data/hls:/tmp/hls
+    ports:
+      - 3010:1935
+      - 3011:8080
+    depends_on:
+      - rooms
 
   # ==========================================================================
 
   revers_proxy:
     container_name: revers_proxy
-    build: ./revers_proxy/dev
+    build: ./services/revers_proxy
     ports:
-      - 8001:80
+      - 8000:80
     depends_on:
       - users
-      - rooms
-
-  rtmp:
-    container_name: rtmp
-    build: ./rtmp/dev
-    volumes:
-      - ./rtmp/dev/data/hls:/tmp/hls
-    ports:
-      - 8002:1935
-      - 8003:8080
-    depends_on:
       - rooms
 
   # ==========================================================================
 
   users:
     container_name: users
-    build:
-      context: ./src/microservices/users
-      dockerfile: Dockerfile.dev
+    build: ./services/users
     environment:
       USERS_HTTP_PORT: "8010"
       USERS_GRPC_PORT: "8011"
@@ -94,9 +72,7 @@ services:
 
   rooms:
     container_name: rooms
-    build:
-      context: ./src/microservices/rooms
-      dockerfile: Dockerfile.dev
+    build: ./services/rooms
     environment:
       ROOMS_HTTP_PORT: "8020"
       ROOMS_HTTP_PONG_TIMEOUT: "30s"

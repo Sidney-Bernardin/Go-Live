@@ -34,20 +34,20 @@ docker compose --profile web_app up --build
 ### Using the Web-App
 When you first open the web-app, you'll be greeted with a login page.
 <div align=center>
-  <img src="./images/image1.png" width="75%" />
+  <img src="./examples/pic1.png" width="75%" />
 </div>
 
 After creating an account, you can live stream by clicking your profile button, then the Go Live button.
 <div align=center>
-  <img src="./images/image2.png" />
+  <img src="./examples/pic2.png" />
 </div>
 
 A popup will appear and after naming your room, you'll be given a URI and key to use in OBS (or your prefered streaming software).
 <div align=center>
-  <img src="./images/image3.png" width="75%" />
+  <img src="./examples/pic3.png" width="75%" />
 </div>
 
 Finally, you and other users can visit your profile to join the stream.
 <div align=center>
-  <img src="./images/image4.png" width="75%" />
+  <img src="./examples/pic4.png" width="75%" />
 </div>

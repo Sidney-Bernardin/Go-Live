@@ -1,2 +1,2 @@
-rtmp/dev/data/*
-src/web-app/node_modules
+services/rtmp/data/*
+services/web-app/node_modules

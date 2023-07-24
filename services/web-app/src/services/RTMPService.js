@@ -1,8 +1,9 @@
 import { getSessionID } from '../utils'
 
+const url = import.meta.env.VITE_RTMP_URL
+
 export default {
-  liveURI: (streamName) =>
-    `rtmp://${import.meta.env.VITE_RTMP_URL}/live/${streamName}`,
+  liveURI: (streamName) => `rtmp://${url}/live/${streamName}`,
   liveKey: (roomName) =>
     encodeURIComponent(
       JSON.stringify({
