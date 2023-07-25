@@ -27,8 +27,7 @@ cd Go-Live
 Then using docker to spin-up Go Live's various services.
 
 ``` bash
-# The "--profile web_app" spins-up an isolated/volume-less version of the web_app service's container.
-docker compose --profile web_app up --build
+docker compose up --build
 ```
 
 ### Using the Web-App
