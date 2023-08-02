@@ -2,11 +2,12 @@ version: "3.9"
 
 services:
 
-  web_app:
-    container_name: web_app
+  web-app:
+    container_name: web-app
+    image: ${REGISTRY}/web-app
     build:
       context: ./services/web-app
-      dockerfile: Dockerfile.dev
+      dockerfile: ${BUILD_MODE}.dockerfile
     volumes:
       - ./services/web-app:/app
     environment:
@@ -22,6 +23,7 @@ services:
 
   rtmp:
     container_name: rtmp
+    image: ${REGISTRY}/rtmp
     build: ./services/rtmp
     volumes:
       - ./services/rtmp/data/hls:/tmp/hls
@@ -33,9 +35,10 @@ services:
 
   # ==========================================================================
 
-  revers_proxy:
-    container_name: revers_proxy
-    build: ./services/revers_proxy
+  revers-proxy:
+    container_name: revers-proxy
+    image: ${REGISTRY}/revers-proxy
+    build: ./services/revers-proxy
     ports:
       - 8000:80
     depends_on:
@@ -46,13 +49,12 @@ services:
 
   users:
     container_name: users
+    image: ${REGISTRY}/users
     build: ./services/users
     environment:
       USERS_HTTP_PORT: "8010"
       USERS_GRPC_PORT: "8011"
-
-      USERS_MONGO_URL: "mongodb://users_db:27017/"
-
+      USERS_MONGO_URL: "mongodb://users-db:27017/"
       USERS_DATABASE_TIMEOUT: "10s"
       USERS_SESSION_LENGTH: "720m"
     ports:
@@ -60,34 +62,36 @@ services:
       - 8011:8011
     command: ./service
     depends_on:
-      - users_db
-
-  users_db:
-    container_name: users_db
-    image: mongo:latest
-    ports:
-      - 27017:27017
-
-  # ==========================================================================
+      - users-db
 
   rooms:
     container_name: rooms
+    image: ${REGISTRY}/rooms
     build: ./services/rooms
     environment:
       ROOMS_HTTP_PORT: "8020"
       ROOMS_HTTP_PONG_TIMEOUT: "30s"
-
       ROOMS_USERS_GRPC_URL: "users:8011"
-      ROOMS_REDIS_URL: "rooms_cache:6379"
+      ROOMS_REDIS_URL: "rooms-cache:6379"
       ROOMS_REDIS_PASSW: ""
     ports:
       - 8020:8020
     command: ./service
     depends_on:
-      - rooms_cache
+      - rooms-cache
 
-  rooms_cache:
-    container_name: rooms_cache
-    image: redislabs/redismod
+  # ==========================================================================
+
+  users-db:
+    container_name: users-db
+    image: ${REGISTRY}/users-db
+    build: ./services/users-db
+    ports:
+      - 27017:27017
+
+  rooms-cache:
+    container_name: rooms-cache
+    image: ${REGISTRY}/rooms-cache
+    build: ./services/rooms-cache
     ports:
       - 6379:6379
