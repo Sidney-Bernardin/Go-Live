@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -13,105 +14,137 @@ import (
 )
 
 type Service interface {
-	Signup(info *SignupInfo) (sessionID string, err error)
-	Signin(info *SigninInfo) (ssessionID string, err error)
-	Logout(sessionID string) error
+	AuthenticateUser(ctx context.Context, sessionID string, fields ...string) (*User, error)
 
-	GetUser(search, by string, fields ...string) (*User, error)
-	SearchUsers(username string, offset, limit int, fields ...string) ([]*User, error)
-	GetSelf(sessionID string, fields ...string) (*User, error)
+	Signup(ctx context.Context, info *SignupInfo) (sessionID string, err error)
+	Signin(ctx context.Context, info *SigninInfo) (ssessionID string, err error)
+	Logout(ctx context.Context, sessionID string) error
 
-	SetProfilePicture(sessionID string, picture []byte) error
-	GetProfilePicture(userID string) (*bytes.Buffer, error)
+	GetUser(ctx context.Context, userID string, fields ...string) (*User, error)
+	SearchUsers(ctx context.Context, username string, offset, limit int, fields ...string) ([]*User, error)
+
+	UpdateProfilePicture(ctx context.Context, sessionID string, profilePicture []byte) error
+	GetProfilePicture(ctx context.Context, userID string) (*bytes.Buffer, error)
 }
 
 type service struct {
-	config       *configuration.Configuration
+	config       *configuration.Config
 	databaseRepo DatabaseRepository
 }
 
-func NewService(config *configuration.Configuration, dbRepo DatabaseRepository) Service {
+func NewService(config *configuration.Config, dbRepo DatabaseRepository) Service {
 	return &service{config, dbRepo}
 }
 
-func (svc *service) Signup(info *SignupInfo) (string, error) {
+// AuthenticateUser gets sessionID's User from the database.
+func (svc *service) AuthenticateUser(ctx context.Context, sessionID string, fields ...string) (*User, error) {
 
-	// Check the length of the username.
+	if i := slices.Index(fields, "password"); i != -1 {
+		fields[i] = ""
+	}
+
+	// Get the Session-ID's User from the database.
+	user, err := svc.databaseRepo.GetUserBySession(ctx, sessionID, fields...)
+	if err != nil {
+
+		// If the error was caused by a ProblemDetail, replace it.
+		if _, ok := errors.Cause(err).(ProblemDetail); ok {
+			return nil, ProblemDetail{Problem: ProblemUnauthorized}
+		}
+
+		return nil, errors.Wrap(err, "cannot get user")
+	}
+
+	return user, nil
+}
+
+// Signup uses info to create a User and a Session, then inserts them into the database.
+func (svc *service) Signup(ctx context.Context, info *SignupInfo) (string, error) {
+
+	// Check the length of the SignupInfo's username.
 	if len(info.Username) < 3 || len(info.Username) > 20 {
 		return "", ProblemDetail{
-			Type:   PDTypeInvalidSignupInfo,
-			Detail: "Username must be between 3 and 20 characters long.",
+			Problem: ProblemInvalidSignupInfo,
+			Detail:  "Username must be between 3 and 20 characters long.",
 		}
 	}
 
-	// Check for taken user fields.
-	fields := map[string]any{"username": info.Username, "email": info.Email}
-	if err := svc.databaseRepo.CheckForTakenUserFields(fields); err != nil {
+	// Check if the SignupInfo has a taken username or email.
+	userExists, takenField, err := svc.databaseRepo.UserExists(ctx,
+		"username", info.Username,
+		"email", info.Email,
+	)
 
-		// If the error was caused by a problem-detail that has one of the
-		// following types, replace it's type.
-		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeFieldTaken) {
-			pd.Type = PDTypeInvalidSignupInfo
-			return "", pd
-		}
-
-		return "", errors.Wrap(err, "cannot check for taken user fields")
+	if err != nil {
+		return "", errors.Wrap(err, "cannot check if user exists")
 	}
 
-	// Hash the password.
+	if userExists {
+		return "", ProblemDetail{
+			Problem: ProblemInvalidSignupInfo,
+			Detail:  fmt.Sprintf("The %s has been taken by another user.", takenField),
+		}
+	}
+
+	// Hash the SignupInfo's password.
 	hashedPasw, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
 	if err != nil {
 		return "", errors.Wrap(err, "cannot hash password")
 	}
 
-	// Create a user.
-	user := &User{
+	// Create a User with the SignupInfo and insert it into the database.
+	userID, err := svc.databaseRepo.InsertUser(ctx, &User{
 		Username: info.Username,
 		Email:    info.Email,
 		Password: string(hashedPasw),
+	})
+
+	if err != nil {
+		return "", errors.Wrap(err, "cannot insert user")
 	}
 
-	// Insert the user with a new session.
-	sessionID, err := svc.databaseRepo.InsertUserWithSession(user, &Session{
+	// Create a Session for the User and insert it into the database.
+	sessionID, err := svc.databaseRepo.InsertSession(ctx, &Session{
+		UserID:   userID,
 		ExpireAt: time.Now().Add(svc.config.SessionLength),
 	})
 
-	return sessionID, errors.Wrap(err, "cannot insert user with session")
+	return sessionID, errors.Wrap(err, "cannot insert session")
 }
 
-func (svc *service) Signin(info *SigninInfo) (string, error) {
+// Signin creates a Session for the User with info's username, and inserts it
+// into the database.
+func (svc *service) Signin(ctx context.Context, info *SigninInfo) (string, error) {
 
-	// Get the user from the database.
-	user, err := svc.databaseRepo.GetUserByUsername(info.Username, "password")
+	// Get the User with the SigninInfo's username.
+	user, err := svc.databaseRepo.GetUserByUsername(ctx, info.Username, "password")
 	if err != nil {
 
-		// If the error was caused by a problem-detail that has one of the
-		// following types, replace it's type and detail.
-		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeUserDoesntExist) {
-			pd.Type = PDTypeInvalidSigninInfo
-			pd.Detail = "Incorrect username or password."
-			return "", pd
-		}
-
-		return "", errors.Wrap(err, "cannot get user by username")
-	}
-
-	// Compare the passwords.
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(info.Password)); err != nil {
-
-		// Check if the passwords don't match.
-		if err == bcrypt.ErrMismatchedHashAndPassword {
+		// If the error was caused by a ProblemDetail, replace it.
+		if _, ok := err.(ProblemDetail); ok {
 			return "", ProblemDetail{
-				Type:   PDTypeInvalidSigninInfo,
-				Detail: "Incorrect username or password.",
+				Problem: ProblemInvalidSigninInfo,
+				Detail:  "Incorrect username or password.",
 			}
 		}
 
-		return "", errors.Wrap(err, "cannot compare hash and password")
+		return "", errors.Wrap(err, "cannot get user")
 	}
 
-	// Create a session for the user and insert it into the database.
-	sessionID, err := svc.databaseRepo.InsertSession(&Session{
+	// Check if the SigninInfo's password matches the User's password.
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(info.Password)); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return "", ProblemDetail{
+				Problem: ProblemInvalidSigninInfo,
+				Detail:  "Incorrect username or password.",
+			}
+		}
+
+		return "", errors.Wrap(err, "cannot compare passwords")
+	}
+
+	// Create a Session for the User and insert it into the database.
+	sessionID, err := svc.databaseRepo.InsertSession(ctx, &Session{
 		UserID:   user.ID,
 		ExpireAt: time.Now().Add(svc.config.SessionLength),
 	})
@@ -119,104 +152,64 @@ func (svc *service) Signin(info *SigninInfo) (string, error) {
 	return sessionID, errors.Wrap(err, "cannot insert session")
 }
 
-func (svc *service) Logout(sessionID string) error {
+// Delete deletes sessionID's Session from the database.
+func (svc *service) Logout(ctx context.Context, sessionID string) error {
+	if err := svc.databaseRepo.DeleteSession(ctx, sessionID); err != nil {
 
-	// Delete the session from the database.
-	err := svc.databaseRepo.DeleteSession(sessionID)
-
-	// If the error was caused by a problem-detail that has one of the
-	// following types, replace it's type and detail.
-	if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID) {
-		pd.Type = PDTypeUnauthorized
-		return pd
-	}
-
-	return errors.Wrap(err, "cannot delete session")
-}
-
-func (svc *service) GetUser(search, by string, fields ...string) (user *User, err error) {
-
-	// Make sure the user's password isn't returned, by removing the password field.
-	if i := slices.Index(fields, "password"); i != -1 {
-		fields[i] = ""
-	}
-
-	// Get the user by ID or username.
-	switch by {
-	case "id":
-		user, err = svc.databaseRepo.GetUser(search, fields...)
-	case "username":
-		user, err = svc.databaseRepo.GetUserByUsername(search, fields...)
-	default:
-		return nil, ProblemDetail{
-			Type:   PDTypeInvalidInput,
-			Detail: fmt.Sprintf("Cannot get user by %s.", by),
+		// If the error was caused by a ProblemDetail, replace it.
+		if _, ok := err.(ProblemDetail); ok {
+			return ProblemDetail{Problem: ProblemUnauthorized}
 		}
+
+		return errors.Wrap(err, "cannot delete session")
 	}
 
-	return user, errors.Wrapf(err, "cannot get user by %s", by)
+	return nil
 }
 
-func (svc *service) SearchUsers(username string, offset, limit int, fields ...string) ([]*User, error) {
+// GetUser gets userID's User form the database.
+func (svc *service) GetUser(ctx context.Context, userID string, fields ...string) (user *User, err error) {
 
-	// Make sure the user passwords aren't returned, by removing the password field.
 	if i := slices.Index(fields, "password"); i != -1 {
 		fields[i] = ""
 	}
 
-	// Get offset and limit's absolute and int64 values.
-	offset64 := int64(math.Abs(float64(offset)))
-	limit64 := int64(math.Abs(float64(limit)))
+	// Get the user-ID's User from the database.
+	user, err = svc.databaseRepo.GetUser(ctx, userID, fields...)
+	return user, errors.Wrap(err, "cannot get user")
+}
 
-	// Search for the users from the database.
-	users, err := svc.databaseRepo.SearchUsers(username, offset64, limit64, fields...)
+// SearchUsers gets Users with usernames similar to the one given, from the database.
+func (svc *service) SearchUsers(ctx context.Context, username string, offset, limit int, fields ...string) ([]*User, error) {
+
+	if i := slices.Index(fields, "password"); i != -1 {
+		fields[i] = ""
+	}
+
+	// Get absolute values of the offset and limit.
+	absOffset := int64(math.Abs(float64(offset)))
+	absLimit := int64(math.Abs(float64(limit)))
+
+	// Get Users with usernames similar to the username.
+	users, err := svc.databaseRepo.SearchUsers(ctx, username, absOffset, absLimit, fields...)
 	return users, errors.Wrap(err, "cannot search fields")
 }
 
-func (svc *service) GetSelf(sessionID string, fields ...string) (*User, error) {
+// UpdateProfilePicture updates the profile-picture of sessionID's User in the database.
+func (svc *service) UpdateProfilePicture(ctx context.Context, sessionID string, profilePicture []byte) error {
 
-	// Make sure the user's password isn't returned, by removing the password field.
-	if i := slices.Index(fields, "password"); i != -1 {
-		fields[i] = ""
-	}
-
-	// Get the session's user from the database.
-	user, err := svc.databaseRepo.GetSessionsUser(sessionID, fields...)
-
-	// If the error was caused by a problem-detail that has one of the following
-	// types, replace it's type.
-	if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID, PDTypeSessionDoesntExist, PDTypeUserDoesntExist) {
-		pd.Type = PDTypeUnauthorized
-		return nil, pd
-	}
-
-	return user, errors.Wrap(err, "cannot get sessions user")
-}
-
-func (svc *service) SetProfilePicture(sessionID string, profilePicture []byte) error {
-
-	// Get the session's user from the database.
-	user, err := svc.databaseRepo.GetSessionsUser(sessionID)
+	user, err := svc.AuthenticateUser(ctx, sessionID)
 	if err != nil {
-
-		// If the error was caused by a problem-detail that has one of the
-		// following types, replace it's type.
-		if pd, ok := errors.Cause(err).(ProblemDetail); ok && pd.hasType(PDTypeInvalidID, PDTypeSessionDoesntExist, PDTypeUserDoesntExist) {
-			pd.Type = PDTypeUnauthorized
-			return pd
-		}
-
-		return errors.Wrap(err, "cannot get sessions user")
+		return errors.Wrap(err, "cannot authenticate user")
 	}
 
-	// Insert the profile-picture into the database.
-	err = svc.databaseRepo.InsertProfilePicture(user.ID, profilePicture)
+	// Update the profile-picture of the User in the database.
+	err = svc.databaseRepo.UpdateProfilePicture(ctx, user.ID, profilePicture)
 	return errors.Wrap(err, "cannot insert profile-picture")
 }
 
-func (svc *service) GetProfilePicture(userID string) (*bytes.Buffer, error) {
-
-	// Get the profile-picture from the database.
-	buf, err := svc.databaseRepo.GetProfilePicture(userID)
+// GetProfilePicture gets the profile picture of userID's User from the database.
+func (svc *service) GetProfilePicture(ctx context.Context, userID string) (*bytes.Buffer, error) {
+	buf, err := svc.databaseRepo.GetProfilePicture(ctx, userID)
 	return buf, errors.Wrap(err, "cannot get profile-picture")
 }

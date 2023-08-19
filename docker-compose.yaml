@@ -47,38 +47,50 @@ services:
 
   # ==========================================================================
 
-  users:
-    container_name: users
-    image: ${REGISTRY}/users
-    build: ./services/users
-    environment:
-      USERS_HTTP_PORT: "8010"
-      USERS_GRPC_PORT: "8011"
-      USERS_MONGO_URL: "mongodb://users-db:27017/"
-      USERS_DATABASE_TIMEOUT: "10s"
-      USERS_SESSION_LENGTH: "720m"
-    ports:
-      - 8010:8010
-      - 8011:8011
-    command: ./service
-    depends_on:
-      - users-db
-
   rooms:
     container_name: rooms
     image: ${REGISTRY}/rooms
     build: ./services/rooms
     environment:
-      ROOMS_HTTP_PORT: "8020"
-      ROOMS_HTTP_PONG_TIMEOUT: "30s"
+      ROOMS_PORT: "8020"
+      ROOMS_READ_TIMEOUT: "15s"
+      ROOMS_WRITE_TIMEOUT: "15s"
+      ROOMS_WS_CLOSE_TIMEOUT: "5s"
+      ROOMS_SHUTDOWN_TIMEOUT: "5s"
+
       ROOMS_USERS_GRPC_URL: "users:8011"
-      ROOMS_REDIS_URL: "rooms-cache:6379"
-      ROOMS_REDIS_PASSW: ""
+      ROOMS_CACHE_URL: "rooms-cache:6379"
+      ROOMS_CACHE_PASSW: ""
     ports:
       - 8020:8020
     command: ./service
     depends_on:
+      - users
       - rooms-cache
+
+  users:
+    container_name: users
+    image: ${REGISTRY}/users
+    build:
+      context: ./services/users
+      dockerfile: ${BUILD_MODE}.dockerfile
+    environment:
+      USERS_SHUTDOWN_TIMEOUT: "5s"
+      USERS_HTTP_PORT: "8010"
+      USERS_HTTP_READ_TIMEOUT: "15s"
+      USERS_HTTP_WRITE_TIMEOUT: "15s"
+      USERS_GRPC_PORT: "8011"
+
+      USERS_SESSION_LENGTH: "720m"
+
+      USERS_DATABASE_TIMEOUT: "10s"
+      USERS_MONGO_URL: "mongodb://users-db:27017/"
+    ports:
+      - 8010:8010
+      - 8011:8011
+    command: ./app
+    depends_on:
+      - users-db
 
   # ==========================================================================
 

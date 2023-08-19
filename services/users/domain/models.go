@@ -10,6 +10,9 @@ type User struct {
 	ID      string             `json:"id,omitempty" bson:"-"`
 	MongoID primitive.ObjectID `json:"-" bson:"_id"`
 
+	ProfilePictureID      string             `json:"profile_picture_id,omitempty" bson:"-"`
+	MongoProfilePictureID primitive.ObjectID `json:"-" bson:"profile_picture_id"`
+
 	Username string `json:"username,omitempty" bson:"username"`
 	Email    string `json:"email,omitempty" bson:"email"`
 	Password string `json:"password,omitempty" bson:"password"`

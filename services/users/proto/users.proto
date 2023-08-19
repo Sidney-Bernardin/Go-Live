@@ -3,21 +3,21 @@ syntax = "proto3";
 option go_package = "users.com";
 
 service Users {
-    rpc GetSelf(GetSelfRequest) returns (GetSelfResponse);
+    rpc AuthenticateUser(AuthenticateUserRequest) returns (User);
 }
 
 message ProblemDetail {
-    string Type = 1;
+    string Problem = 1;
     string Detail = 2;
 }
 
-message GetSelfRequest {
-    string SessionID = 1;
-    repeated string fields = 2;
-}
-
-message GetSelfResponse {
+message User {
     string ID = 1;
     string Username = 2;
     string Email = 3;
+}
+
+message AuthenticateUserRequest {
+    string SessionID = 1;
+    repeated string fields = 2;
 }

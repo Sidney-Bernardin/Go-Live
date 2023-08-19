@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/rs/zerolog"
@@ -17,10 +17,6 @@ import (
 	"users/repositories/database/mongo"
 )
 
-type API interface {
-	Serve(port int) error
-}
-
 func main() {
 
 	// Create a logger.
@@ -28,8 +24,8 @@ func main() {
 	logger := zerolog.New(os.Stdout)
 	logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	// Create a configuration.
-	config, err := configuration.New("users")
+	// Create a Config.
+	config, err := configuration.NewConfig("users")
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Cannot create configuration")
 	}
@@ -43,38 +39,43 @@ func main() {
 	// Create a service.
 	svc := domain.NewService(config, databaseRepo)
 
-	// Setup a new wait-group and signal-channel.
-	wg := sync.WaitGroup{}
-	signalChan := make(chan os.Signal, 1)
+	var (
+		apiErrChan = make(chan error, 2)
+		signalChan = make(chan os.Signal)
+
+		// Create APIs.
+		httpAPI = http.NewAPI(config, &logger, svc)
+		grpcAPI = grpc.NewAPI(config, &logger, svc)
+	)
+
+	// Serve APIs.
+	go func() { apiErrChan <- httpAPI.Serve() }()
+	go func() { apiErrChan <- grpcAPI.Serve() }()
+
+	logger.Info().
+		Int("http_port", config.HTTPPort).
+		Int("grpc_port", config.GRPCPort).
+		Msg("Serving APIs")
+
+	// Send interrupt and termination signals to signalChan.
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	// Serve an HTTP and GRPC API in seperate go-routines.
-	wg.Add(2)
-	go serveAPI(&wg, "HTTP", http.New(svc, &logger), config.HTTPPort, &logger)
-	go serveAPI(&wg, "GRPC", grpc.New(svc, &logger), config.GRPCPort, &logger)
+	select {
 
-	// Wait for the wait-group in another go-routine.
-	go func() {
-		wg.Wait()
-		close(signalChan)
-	}()
+	case err := <-apiErrChan:
+		logger.Fatal().Stack().Err(err).Msg("An API crashed")
 
-	// Block until a signal is received or the channel closes.
-	<-signalChan
-}
+	// Shutdown the APIs when an OS signal is recived.
+	case <-signalChan:
 
-// serveAPI decrements the given wait-group's counter by 1 after the given API
-// is done serving.
-func serveAPI(wg *sync.WaitGroup, name string, api API, port int, l *zerolog.Logger) {
-	defer wg.Done()
+		logger.Info().Msg("Shutting down")
+		ctx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
+		defer cancel()
 
-	l.Info().Int("port", port).Msgf("Serving %s", name)
-
-	// Serve the API.
-	if err := api.Serve(port); err != nil {
-		l.Error().Stack().Err(err).Msgf("Cannot serve %s", name)
-		return
+		// Shutdown APIs.
+		grpcAPI.Shutdown()
+		if err := httpAPI.Shutdown(ctx); err != nil {
+			logger.Error().Stack().Err(err).Msg("Error during shutdown")
+		}
 	}
-
-	l.Info().Msgf("Done serving %s", name)
 }

@@ -3,23 +3,30 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"users/domain"
 
 	"github.com/pkg/errors"
 )
 
-// err writes e to the given http.ResponseWriter with with the given status code.
-func (a *api) err(w http.ResponseWriter, statusCode int, e error) {
+// err writes the cause of e to the connection. If e wasn't caused by a
+// ProblemDetail, it's is logged and a new server error ProblemDetail is
+// written instead.
+func (a *api) err(w http.ResponseWriter, e error) {
 
-	// If the status code 500 or more, treat e as a server error.
-	if statusCode >= 500 {
+	// If the error wasn't caused by a ProblemDetail, treat it as a server error.
+	pd, ok := errors.Cause(e).(domain.ProblemDetail)
+	if !ok {
 		a.logger.Error().Stack().Err(e).Msg("Server Error")
-		e = errors.New("Server Error")
+		pd = domain.ProblemDetail{
+			Problem: domain.ProblemServerError,
+			Detail:  "Server Error",
+		}
 	}
 
-	// Respond.
+	// Respond with the ProblemDetail.
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(e); err != nil {
+	w.WriteHeader(pd.HTTPStatusCode())
+	if err := json.NewEncoder(w).Encode(pd); err != nil {
 		err = errors.Wrap(err, "cannot write response to HTTP connection")
 		a.logger.Error().Stack().Err(err).Msg("Server Error")
 	}

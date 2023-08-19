@@ -3,122 +3,77 @@ package http
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"users/domain"
 
-	"github.com/pkg/errors"
+	"github.com/gorilla/mux"
 )
 
-type adapter func(http.HandlerFunc) http.HandlerFunc
+const (
+	mwBearerToken = iota
+)
 
-func (a *api) adapt(h http.HandlerFunc, adapters ...adapter) http.HandlerFunc {
-	for _, a := range adapters {
-		h = a(h)
-	}
-	return h
+func (a *api) logRequest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Log the request.
+		a.logger.Info().
+			Str("method", r.Method).
+			Str("uri", r.RequestURI).
+			Msg("New request")
+
+		next.ServeHTTP(w, r)
+	})
 }
 
-const middlewareCtxKey = 0
+func (a *api) getBearerToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-type middlewareData struct {
-	bearerToken string
-	formFile    []byte
+		// Get the token from the request's Authorization header.
+		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer")
+
+		// Add the token to the request's context and call the next handler.
+		ctx := context.WithValue(r.Context(), mwBearerToken, strings.TrimSpace(token))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
-func (a *api) logRequest() adapter {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-
-			// Log the request.
-			a.logger.Info().
-				Str("method", r.Method).
-				Str("uri", r.RequestURI).
-				Msg("New request")
-
-			next.ServeHTTP(w, r)
-		}
-	}
-}
-
-func (a *api) getBearerToken() adapter {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-
-			// Get the Authorization header from the request, and split it into
-			// two parts.
-			parts := strings.Split(r.Header.Get("Authorization"), "Bearer")
-			if len(parts) != 2 {
-				a.err(w, http.StatusUnauthorized, domain.ProblemDetail{
-					Type: domain.PDTypeUnauthorized,
-				})
-				return
-			}
-
-			// Get the requests middleware-data.
-			mwData, ok := r.Context().Value(middlewareCtxKey).(*middlewareData)
-			if !ok {
-				mwData = &middlewareData{}
-			}
-
-			// Add the second part to the middleware-data with it's white space trimed.
-			mwData.bearerToken = strings.TrimSpace(parts[1])
-
-			// Call the next handler with the updated middleware-data.
-			ctx := context.WithValue(r.Context(), middlewareCtxKey, mwData)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		}
-	}
-}
-
-func (a *api) getFormFile(name string, maxSize int64) adapter {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func (a *api) getFormFile(name string, maxSize int64) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			// Parse the request's form data.
 			if err := r.ParseMultipartForm(maxSize); err != nil {
-				a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
-					Type:   domain.PDTypeInvalidInput,
-					Detail: fmt.Sprintf("Cannot parse form data: '%v'", err),
-				})
+				a.err(w, domain.ProblemDetail{
+					Problem: domain.ProblemInvalidInput,
+					Detail:  fmt.Sprintf("Cannot parse form data: %v", err)})
 				return
 			}
 
-			// Get the file from the request.
+			// Get the file from the request's form data.
 			file, _, err := r.FormFile(name)
 			if err != nil {
 
 				// Check if the file is missing.
 				if err == http.ErrMissingFile {
-					a.err(w, http.StatusUnprocessableEntity, domain.ProblemDetail{
-						Type:   domain.PDTypeInvalidInput,
-						Detail: fmt.Sprintf("Missing the '%s' file from the request.", name),
-					})
+					a.err(w, domain.ProblemDetail{
+						Problem: domain.ProblemInvalidInput,
+						Detail:  fmt.Sprintf("Missing the %s file from request form data.", name)})
 					return
 				}
-
-				a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot get file from request"))
-				return
 			}
 			defer file.Close()
 
-			// Get the requests middleware-data.
-			mwData, ok := r.Context().Value(middlewareCtxKey).(*middlewareData)
-			if !ok {
-				mwData = &middlewareData{}
-			}
-
-			// Read the file and add it to the middleware-data.
-			mwData.formFile, err = ioutil.ReadAll(file)
+			// Get the file's bytes.
+			fileBytes, err := io.ReadAll(file)
 			if err != nil {
-				a.err(w, http.StatusInternalServerError, errors.Wrap(err, "cannot read file"))
-				return
 			}
 
-			// Call the next handler with the updated middleware-data.
-			ctx := context.WithValue(r.Context(), middlewareCtxKey, mwData)
+			// Add the file to the request's context and call the next handler.
+			ctx := context.WithValue(r.Context(), name, fileBytes)
 			next.ServeHTTP(w, r.WithContext(ctx))
-		}
+		})
 	}
 }

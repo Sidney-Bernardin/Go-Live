@@ -1,88 +1,61 @@
 package grpc
 
 import (
-	"context"
 	"fmt"
 	"net"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 
+	"users/configuration"
 	"users/domain"
 	pb "users/proto/users.com"
 )
 
 type api struct {
-	service domain.Service
 	pb.UnimplementedUsersServer
-	logger *zerolog.Logger
+	server  *grpc.Server
+	service domain.Service
+	logger  *zerolog.Logger
+
+	address string
 }
 
-func New(svc domain.Service, l *zerolog.Logger) *api {
-	return &api{
-		service: svc,
+func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *api {
+
+	// Create an api.
+	a := &api{
 		logger:  l,
+		service: svc,
+		address: fmt.Sprintf("0.0.0.0:%v", config.GRPCPort),
 	}
-}
 
-func (a *api) Serve(port int) error {
-
-	// Create a GRPC server.
+	// Create a server.
 	svr := grpc.NewServer()
 	pb.RegisterUsersServer(svr, a)
 	reflection.Register(svr)
 
-	// Create a TCP listener for the server.
-	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	a.server = svr
+	return a
+}
+
+// Start starts the api's server.
+func (a *api) Serve() error {
+
+	// Create a listener.
+	ln, err := net.Listen("tcp", a.address)
 	if err != nil {
-		return errors.Wrap(err, "cannot create TCP listener")
+		return errors.Wrap(err, "cannot create listener")
 	}
 
-	// Serve the GRPC server with the listener.
-	err = svr.Serve(l)
+	// Start the server.
+	err = a.server.Serve(ln)
 	return errors.Wrap(err, "cannot serve")
 }
 
-// newProblemDetailStatus returns a new GRPC status containing the problem-detail.
-func (a *api) newProblemDetailStatus(code codes.Code, pd domain.ProblemDetail) (*status.Status, error) {
-
-	// Create a GRPC status with details that contain the problem-detail.
-	s, err2 := status.Newf(code, pd.Error()).WithDetails(&pb.ProblemDetail{
-		Type:   pd.Type,
-		Detail: pd.Detail,
-	})
-
-	return s, errors.Wrap(err2, "cannot create status")
-}
-
-func (a *api) GetSelf(ctx context.Context, req *pb.GetSelfRequest) (*pb.GetSelfResponse, error) {
-
-	user, err := a.service.GetSelf(req.GetSessionID(), req.GetFields()...)
-	if err != nil {
-
-		// Check if the error was caused by a problem-detail.
-		problemDetail, ok := errors.Cause(err).(domain.ProblemDetail)
-		if ok {
-
-			// Create a GRPC status that contains the problem-detail.
-			s, err2 := a.newProblemDetailStatus(codes.FailedPrecondition, problemDetail)
-			if err2 != nil {
-				return nil, status.Newf(codes.Internal, err2.Error()).Err()
-			}
-
-			return nil, s.Err()
-		}
-
-		return nil, status.Newf(codes.Internal, err.Error()).Err()
-	}
-
-	return &pb.GetSelfResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-	}, nil
+// Shutdown gracefully shuts down the api's server.
+func (a *api) Shutdown() {
+	a.server.GracefulStop()
 }
