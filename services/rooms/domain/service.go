@@ -1,7 +1,8 @@
 package domain
 
 import (
-	"sync"
+	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -9,168 +10,106 @@ import (
 )
 
 type Service interface {
-	CreateRoom(streamName string, roomKey *RoomKey) error
-	GetRoom(roomID string) (*Room, error)
-	JoinRoom(sessionID, roomID string) (*User, <-chan map[string]any, error)
-	LeaveRoom(userID, roomID string) error
-	DeleteRoom(sessionID string) error
+	CreateRoom(ctx context.Context, sessionID, streamID string) error
+	DeleteRoom(ctx context.Context, sessionID string) error
+	GetRoom(ctx context.Context, roomID string) (*Room, error)
 
-	BroadcastMessage(user *User, roomID string, msg map[string]any) error
+	JoinRoom(ctx context.Context, sessionID, roomID string) (userID string, err error)
+	LeaveRoom(ctx context.Context, userID, roomID string) error
+
+	ListenForRoomEvents(ctx context.Context, eventChan chan ChanMsg[*RoomEvent], roomID string)
+	SendRoomEvent(ctx context.Context, userID, roomID string, event *RoomEvent) error
 }
 
 type service struct {
-	config *configuration.Configuration
-	mu     *sync.Mutex
+	config *configuration.Config
 
 	cacheRepo       CacheRepository
 	usersClientRepo UsersClientRepository
-
-	roomChannels map[string]chan map[string]any
 }
 
 func NewService(
-	config *configuration.Configuration,
+	config *configuration.Config,
 	cacheRepo CacheRepository,
 	usersClientRepo UsersClientRepository,
 ) Service {
 	return &service{
 		config:          config,
-		mu:              &sync.Mutex{},
 		cacheRepo:       cacheRepo,
 		usersClientRepo: usersClientRepo,
-		roomChannels:    make(map[string]chan map[string]any),
 	}
 }
 
-func (svc *service) CreateRoom(streamName string, roomKey *RoomKey) error {
+// CreateRoom creates a new Room for sessionID's User and inserts it into the cache.
+func (svc *service) CreateRoom(ctx context.Context, sessionID, videoStreamID string) error {
 
-	user, err := svc.usersClientRepo.GetSelf(roomKey.SessionID, nil)
+	user, err := svc.usersClientRepo.AuthenticateUser(ctx, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "cannot get self")
 	}
 
-	// Make sure another user's stream-name isn't being used.
-	if user.ID != streamName {
+	// Make sure the User doesn't create a room for someone elses account.
+	if user.ID != videoStreamID {
 		return ProblemDetail{
-			Type:   PDTypeBadStreamID,
-			Detail: "Your stream-name and user-ID must match.",
+			Problem: ProblemUnauthorized,
 		}
 	}
 
-	// Create a room.
-	room := &Room{
-		ID:      user.ID,
-		Name:    roomKey.RoomSettings.Name,
-		Viewers: map[string]*Viewer{},
-	}
+	// Insert a new Room for the User into the cache.
+	err = svc.cacheRepo.InsertRoom(ctx, &Room{
+		ID:    user.ID,
+		Name:  fmt.Sprintf("%s's Room", user.Username),
+		Users: []string{},
+	})
 
-	// Insert the room into the cache.
-	if err := svc.cacheRepo.InsertRoom(room); err != nil {
-		return errors.Wrap(err, "cannot insert room")
-	}
-
-	// Create a channel for the room.
-	svc.mu.Lock()
-	svc.roomChannels[user.ID] = make(chan map[string]any)
-	svc.mu.Unlock()
-
-	return nil
+	return errors.Wrap(err, "cannot insert room")
 }
 
-func (svc *service) GetRoom(roomID string) (*Room, error) {
+// DeleteRoom deletes the Room of sessionID's User from the cache.
+func (svc *service) DeleteRoom(ctx context.Context, sessionID string) error {
 
-	// Get the room from the cache.
-	room, err := svc.cacheRepo.GetRoom(roomID)
+	user, err := svc.usersClientRepo.AuthenticateUser(ctx, sessionID)
+	if err != nil {
+		return errors.Wrap(err, "cannot get self")
+	}
+
+	// Delete the User-ID's Room from the cache.
+	err = svc.cacheRepo.DeleteRoom(ctx, user.ID)
+	return errors.Wrap(err, "cannot delete room")
+}
+
+// GetRoom roomID's Room from the cache.
+func (svc *service) GetRoom(ctx context.Context, roomID string) (*Room, error) {
+	room, err := svc.cacheRepo.GetRoom(ctx, roomID)
 	return room, errors.Wrap(err, "cannot get room")
 }
 
-func (svc *service) JoinRoom(sessionID, roomID string) (*User, <-chan map[string]any, error) {
+// JoinRoom adds the User-ID of sessionID's User to roomID's Room in the cache.
+func (svc *service) JoinRoom(ctx context.Context, sessionID, roomID string) (string, error) {
 
-	user, err := svc.usersClientRepo.GetSelf(sessionID, []string{"username"})
+	user, err := svc.usersClientRepo.AuthenticateUser(ctx, sessionID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "cannot get self")
+		return "", errors.Wrap(err, "cannot get self")
 	}
 
-	// Create a viewer.
-	viewer := &Viewer{
-		UserID: user.ID,
-	}
-
-	// Insert the viewer into the cache.
-	if err := svc.cacheRepo.InsertViewer(roomID, viewer); err != nil {
-		return nil, nil, errors.Wrap(err, "cannot insert viewer")
-	}
-
-	// Get the room's channel.
-	roomChan, ok := svc.roomChannels[roomID]
-	if !ok {
-		return nil, nil, ProblemDetail{
-			Type: PDTypeRoomDoesntExist,
-		}
-	}
-
-	return user, roomChan, nil
+	// Add the User-ID to the Room in the cache.
+	err = svc.cacheRepo.AddUserToRoom(ctx, roomID, user.ID)
+	return user.ID, errors.Wrap(err, "cannot insert viewer")
 }
 
-func (svc *service) LeaveRoom(userID, roomID string) error {
-
-	// Delete the viewer from the cache.
-	err := svc.cacheRepo.DeleteViewer(userID, roomID)
+// LeaveRoom removes userID from roomID's Room in the cache.
+func (svc *service) LeaveRoom(ctx context.Context, userID, roomID string) error {
+	err := svc.cacheRepo.RemoveUserFromRoom(ctx, roomID, userID)
 	return errors.Wrap(err, "cannot delete viewer")
 }
 
-func (svc *service) DeleteRoom(sessionID string) error {
-
-	user, err := svc.usersClientRepo.GetSelf(sessionID, nil)
-	if err != nil {
-		return errors.Wrap(err, "cannot get self")
-	}
-
-	// Delete the room from the cache.
-	if err := svc.cacheRepo.DeleteRoom(user.ID); err != nil {
-		return errors.Wrap(err, "cannot delete room")
-	}
-
-	// Delete the room's channel.
-	svc.mu.Lock()
-	delete(svc.roomChannels, user.ID)
-	svc.mu.Unlock()
-
-	return nil
+// ListenForRoomEvents sends the RoomEvents of the roomID's Room to eventChan.
+func (svc *service) ListenForRoomEvents(ctx context.Context, eventChan chan ChanMsg[*RoomEvent], roomID string) {
+	svc.cacheRepo.SubToRoomEvents(ctx, eventChan, roomID)
 }
 
-func (svc *service) BroadcastMessage(user *User, roomID string, msg map[string]any) error {
-
-	switch msg["type"] {
-
-	// For chat messages, add basic user fields to the message, to help other
-	// users identify this user.
-	case "CHAT":
-		msg["user_id"] = user.ID
-		msg["username"] = user.Username
-
-	default:
-		return nil
-	}
-
-	// Get the room's channel.
-	roomChan, ok := svc.roomChannels[roomID]
-	if !ok {
-		return ProblemDetail{
-			Type: PDTypeRoomDoesntExist,
-		}
-	}
-
-	// Get the room from the cache.
-	room, err := svc.cacheRepo.GetRoom(roomID)
-	if err != nil {
-		return errors.Wrap(err, "cannot get room")
-	}
-
-	// Send the message for each viewer in the room.
-	for range room.Viewers {
-		roomChan <- msg
-	}
-
-	return nil
+// SendRoomEvent sends event to the topic for roomID's Room in the cache.
+func (svc *service) SendRoomEvent(ctx context.Context, userID, roomID string, event *RoomEvent) error {
+	err := svc.cacheRepo.Publish(ctx, roomID, event)
+	return errors.Wrap(err, "cannot publish event")
 }

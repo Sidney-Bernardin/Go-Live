@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"rooms/configuration"
 	"rooms/domain"
@@ -15,10 +16,10 @@ type usersClientRepository struct {
 	client pb.UsersClient
 }
 
-func NewUsersClientRepository(config *configuration.Configuration) (domain.UsersClientRepository, error) {
+func NewUsersClientRepository(config *configuration.Config) (domain.UsersClientRepository, error) {
 
-	// Connect to the users service.
-	conn, err := grpc.Dial(config.UsersGRPCUrl, grpc.WithInsecure())
+	// Connect to Users Service.
+	conn, err := grpc.Dial(config.UsersGRPCUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot dial users service")
 	}
@@ -26,22 +27,24 @@ func NewUsersClientRepository(config *configuration.Configuration) (domain.Users
 	return &usersClientRepository{pb.NewUsersClient(conn)}, nil
 }
 
-func (repo *usersClientRepository) GetSelf(sessionID string, fields []string) (*domain.User, error) {
+// AuthenticateUser authenticates the Session-ID's User.
+func (repo *usersClientRepository) AuthenticateUser(ctx context.Context, sessionID string, fields ...string) (*domain.User, error) {
 
-	req := &pb.GetSelfRequest{
+	req := &pb.AuthenticateUserRequest{
 		SessionID: sessionID,
 		Fields:    fields,
 	}
 
-	res, err := repo.client.GetSelf(context.Background(), req)
+	// Authenticate the Session-ID's User.
+	res, err := repo.client.AuthenticateUser(ctx, req)
 	if err != nil {
 
-		// Check if the error has a problem-detail.
-		if pd, ok := repo.getProblemDetail(err); ok {
-			return nil, pd
+		// Check if the error has a ProblemDetail.
+		if pd := repo.getProblemDetail(err); pd != nil {
+			return nil, *pd
 		}
 
-		return nil, errors.Wrap(err, "cannot get self")
+		return nil, errors.Wrap(err, "cannot authenticate user")
 	}
 
 	return &domain.User{

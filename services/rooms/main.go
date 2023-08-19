@@ -1,25 +1,21 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
-	"rooms/apis/http"
+	"rooms/api"
 	"rooms/configuration"
 	"rooms/domain"
 	"rooms/repositories/cache/redis"
 	"rooms/repositories/users_client/grpc"
 )
-
-type API interface {
-	Serve(port int) error
-}
 
 func main() {
 
@@ -28,58 +24,54 @@ func main() {
 	logger := zerolog.New(os.Stdout)
 	logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	// Create a configuration.
-	config, err := configuration.New("rooms")
+	// Create a Config.
+	config, err := configuration.NewConfig("rooms")
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Cannot create configuration")
 	}
 
-	// Create a mongo database repository.
-	cacheRepo, err := redis.NewCacheRepository(config)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Cannot create redis cache database repository")
-	}
+	// Create a redis cache repository.
+	cacheRepo := redis.NewCacheRepository(config)
 
-	// Create a new users client repository.
+	// Create a users-client repository.
 	usersClientRepo, err := grpc.NewUsersClientRepository(config)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Cannot create grpc users client repository")
+		logger.Fatal().Stack().Err(err).Msg("Cannot create grpc users-client repository")
 	}
 
 	// Create a service.
 	svc := domain.NewService(config, cacheRepo, usersClientRepo)
 
-	// Setup a new wait-group and signal-channel.
-	wg := sync.WaitGroup{}
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	var (
+		apiErrChan = make(chan error)
+		signalChan = make(chan os.Signal)
 
-	// Serve an HTTP API in it's own go-routine.
-	wg.Add(1)
-	go serveAPI(&wg, "HTTP", http.New(svc, config, &logger), config.HTTPPort, &logger)
-
-	// Wait for the wait-group in another go-routine.
-	go func() {
-		wg.Wait()
-		close(signalChan)
-	}()
-
-	// Block until a signal is received or the channel closes.
-	<-signalChan
-}
-
-// serveAPI decrements the given wait-group's counter by 1 after the given API
-// is done serving.
-func serveAPI(wg *sync.WaitGroup, name string, api API, port int, l *zerolog.Logger) {
-	defer wg.Done()
-
-	l.Info().Int("port", port).Msgf("Serving %s", name)
+		// Create an API.
+		httpAPI = api.NewAPI(config, &logger, svc)
+	)
 
 	// Serve the API.
-	if err := api.Serve(port); err != nil {
-		l.Error().Stack().Err(err).Msgf("Cannot serve %s", name)
-		return
-	}
+	go func() { apiErrChan <- httpAPI.Serve() }()
+	logger.Info().Int("port", config.Port).Msg("Serving API")
 
-	l.Info().Msgf("Done serving %s", name)
+	// Send interrupt and termination signals to signalChan.
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	select {
+
+	case err := <-apiErrChan:
+		logger.Fatal().Stack().Err(err).Msg("API crashed")
+
+	// Shutdown the API when an OS signal is recived.
+	case <-signalChan:
+		logger.Info().Msg("Shutting down")
+
+		ctx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
+		defer cancel()
+
+		// Shutdown the API.
+		if err := httpAPI.Shutdown(ctx); err != nil {
+			logger.Error().Stack().Err(err).Msg("Error during shutdown")
+		}
+	}
 }

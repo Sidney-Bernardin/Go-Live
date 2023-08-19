@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
-	GetSelf(ctx context.Context, in *GetSelfRequest, opts ...grpc.CallOption) (*GetSelfResponse, error)
+	AuthenticateUser(ctx context.Context, in *AuthenticateUserRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type usersClient struct {
@@ -33,9 +33,9 @@ func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
 	return &usersClient{cc}
 }
 
-func (c *usersClient) GetSelf(ctx context.Context, in *GetSelfRequest, opts ...grpc.CallOption) (*GetSelfResponse, error) {
-	out := new(GetSelfResponse)
-	err := c.cc.Invoke(ctx, "/Users/GetSelf", in, out, opts...)
+func (c *usersClient) AuthenticateUser(ctx context.Context, in *AuthenticateUserRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/Users/AuthenticateUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *usersClient) GetSelf(ctx context.Context, in *GetSelfRequest, opts ...g
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
-	GetSelf(context.Context, *GetSelfRequest) (*GetSelfResponse, error)
+	AuthenticateUser(context.Context, *AuthenticateUserRequest) (*User, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -54,8 +54,8 @@ type UsersServer interface {
 type UnimplementedUsersServer struct {
 }
 
-func (UnimplementedUsersServer) GetSelf(context.Context, *GetSelfRequest) (*GetSelfResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSelf not implemented")
+func (UnimplementedUsersServer) AuthenticateUser(context.Context, *AuthenticateUserRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateUser not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -70,20 +70,20 @@ func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
 	s.RegisterService(&Users_ServiceDesc, srv)
 }
 
-func _Users_GetSelf_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSelfRequest)
+func _Users_AuthenticateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UsersServer).GetSelf(ctx, in)
+		return srv.(UsersServer).AuthenticateUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Users/GetSelf",
+		FullMethod: "/Users/AuthenticateUser",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).GetSelf(ctx, req.(*GetSelfRequest))
+		return srv.(UsersServer).AuthenticateUser(ctx, req.(*AuthenticateUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -96,8 +96,8 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UsersServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetSelf",
-			Handler:    _Users_GetSelf_Handler,
+			MethodName: "AuthenticateUser",
+			Handler:    _Users_AuthenticateUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

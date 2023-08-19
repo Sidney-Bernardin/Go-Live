@@ -6,22 +6,23 @@ type User struct {
 	Email    string `json:"email,omitempty"`
 }
 
-type Viewer struct {
-	UserID string `json:"user_id"`
-}
-
 type Room struct {
-	ID  string `json:"id,omitempty"`
-	Key string `json:"key" redis:",key"`
-	Ver int64  `json:"ver" redis:",ver"`
-
-	Name    string             `json:"name"`
-	Viewers map[string]*Viewer `json:"viewers"`
+	ID    string   `json:"id,omitempty"`
+	Name  string   `json:"name" redis:"key1"`
+	Users []string `json:"users" redis:"key2"`
 }
 
-type RoomKey struct {
-	SessionID    string `json:"session_id"`
-	RoomSettings struct {
-		Name string `json:"name"`
-	} `json:"room_settings"`
+type ChanMsg[T any] struct {
+	Content T     `json:"content,omitempty"`
+	Err     error `json:"error,omitempty"`
+}
+
+type RoomEvent struct {
+	Type string `json:"type"`
+	ChatMsg
+}
+
+type ChatMsg struct {
+	UserID  string `json:"user_id,omitempty"`
+	Message string `json:"message,omitempty"`
 }

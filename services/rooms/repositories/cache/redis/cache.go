@@ -2,188 +2,92 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"rooms/configuration"
 	"rooms/domain"
 
 	"github.com/pkg/errors"
-	"github.com/rueian/rueidis"
-	"github.com/rueian/rueidis/om"
+	"github.com/redis/go-redis/v9"
 )
 
 type cacheRepository struct {
-	config    *configuration.Configuration
-	client    rueidis.Client
-	roomsRepo om.Repository[domain.Room]
+	client *redis.Client
 }
 
-func NewCacheRepository(config *configuration.Configuration) (domain.CacheRepository, error) {
+func NewCacheRepository(config *configuration.Config) domain.CacheRepository {
 
 	// Connect to Redis.
-	client, err := rueidis.NewClient(rueidis.ClientOption{
-		InitAddress: []string{config.RedisURL},
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.CacheURL,
+		Password: config.CachePassw,
 	})
 
+	return &cacheRepository{client}
+}
+
+// InsertRoom sets room.
+func (repo *cacheRepository) InsertRoom(ctx context.Context, room *domain.Room) error {
+	err := repo.client.HSet(ctx, "rooms:"+room.ID, room).Err()
+	return errors.Wrap(err, "cannot set room")
+}
+
+// DeleteRoom deletes roomID's Room.
+func (repo *cacheRepository) DeleteRoom(ctx context.Context, roomID string) error {
+	err := repo.client.Del(ctx, "rooms:"+roomID).Err()
+	return errors.Wrap(err, "cannot delete room")
+}
+
+// GetRoom gets roomID's Room.
+func (repo *cacheRepository) GetRoom(ctx context.Context, roomID string) (room *domain.Room, err error) {
+	err = repo.client.HGetAll(ctx, "rooms:"+roomID).Scan(&room)
+	return room, errors.Wrap(err, "cannot get room")
+}
+
+// AddUserToRoom pushes userID to the Users list.
+func (repo *cacheRepository) AddUserToRoom(ctx context.Context, roomID, userID string) error {
+	err := repo.client.LPush(ctx, "rooms:"+roomID+":viewers", userID).Err()
+	return errors.Wrap(err, "cannot push viewer")
+}
+
+// AddUserToRoom removes userID from the Users list.
+func (repo *cacheRepository) RemoveUserFromRoom(ctx context.Context, roomID, userID string) error {
+	err := repo.client.LRem(ctx, "rooms:"+roomID+":viewers", 0, userID).Err()
+	return errors.Wrap(err, "cannot remove viewer")
+}
+
+func (repo *cacheRepository) SubToRoomEvents(ctx context.Context, eventChan chan domain.ChanMsg[*domain.RoomEvent], topic string) {
+
+	sub := repo.client.Subscribe(ctx, topic)
+
+	for {
+
+		msg, err := sub.ReceiveMessage(ctx)
+		if err != nil {
+			eventChan <- domain.ChanMsg[*domain.RoomEvent]{
+				Err: errors.Wrap(err, "cannot receive message")}
+			continue
+		}
+
+		var roomEvent *domain.RoomEvent
+		if err := json.Unmarshal([]byte(msg.Payload), &roomEvent); err != nil {
+			eventChan <- domain.ChanMsg[*domain.RoomEvent]{
+				Err: errors.Wrap(err, "cannot decode room event")}
+			continue
+		}
+
+		eventChan <- domain.ChanMsg[*domain.RoomEvent]{
+			Content: roomEvent,
+		}
+	}
+}
+
+func (repo *cacheRepository) Publish(ctx context.Context, topic string, event any) error {
+
+	b, err := json.Marshal(event)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot connect to redis")
+		return errors.Wrap(err, "cannot encode room event")
 	}
 
-	// Create an object-map for rooms.
-	roomsRepo := om.NewJSONRepository("rooms", domain.Room{}, client)
-
-	// err = roomsRepo.CreateIndex(context.Background(), func(schema om.FtCreateSchema) om.Completed {
-	// 	return schema.FieldName("$.name").Text().Build()
-	// })
-
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "cannot create index for rooms")
-	// }
-
-	return &cacheRepository{config, client, roomsRepo}, nil
-}
-
-func (repo *cacheRepository) InsertRoom(room *domain.Room) error {
-
-	// Create a copy of the room with the rooms object-map.
-	newRoom := repo.roomsRepo.NewEntity()
-	newRoom.Key = room.ID
-	newRoom.Name = room.Name
-	newRoom.Viewers = room.Viewers
-
-	// Set the copy.
-	if err := repo.roomsRepo.Save(context.Background(), newRoom); err != nil {
-
-		// Check if the room already exists.
-		if err.Error() == "object version mismatched, please retry" {
-			return domain.ProblemDetail{
-				Type: domain.PDTypeRoomAlreadyExists,
-			}
-		}
-
-		return errors.Wrap(err, "cannot save room")
-	}
-
-	return nil
-}
-
-func (repo *cacheRepository) GetRoom(roomID string) (*domain.Room, error) {
-
-	// Get the room.
-	room, err := repo.roomsRepo.Fetch(context.Background(), roomID)
-	if err != nil {
-
-		// Check if the room wasn't found.
-		if rueidis.IsRedisNil(err) {
-			return nil, domain.ProblemDetail{
-				Type: domain.PDTypeRoomDoesntExist,
-			}
-		}
-
-		return nil, errors.Wrap(err, "cannot fetch room")
-	}
-
-	return &domain.Room{
-		ID:      room.Key,
-		Name:    room.Name,
-		Viewers: room.Viewers,
-	}, nil
-}
-
-func (repo *cacheRepository) DeleteRoom(roomID string) error {
-
-	// Delete the room.
-	err := repo.roomsRepo.Remove(context.Background(), roomID)
-	return errors.Wrap(err, "cannot remove room")
-}
-
-func (repo *cacheRepository) InsertViewer(roomID string, viewer *domain.Viewer) error {
-
-	// Sets the viewer into the room.
-	cmd := repo.client.B().JsonSet().
-		Key("rooms:" + roomID).
-		Path("$.viewers." + viewer.UserID).
-		Value(rueidis.JSON(viewer)).
-		Nx().Build()
-
-	// Use the command.
-	if err := repo.client.Do(context.Background(), cmd).Error(); err != nil {
-
-		// Check if the room wasn't found.
-		if err.Error() == "new objects must be created at the root" {
-			return domain.ProblemDetail{
-				Type: domain.PDTypeViewerDoesntExist,
-			}
-		}
-
-		// Check if the viewer already exists.
-		if rueidis.IsRedisNil(err) {
-			return domain.ProblemDetail{
-				Type: domain.PDTypeViewerAlreadyExists,
-			}
-		}
-
-		return errors.Wrap(err, "cannot set viewer into room")
-	}
-
-	return nil
-}
-
-func (repo *cacheRepository) GetViewer(roomID, userID string) (*domain.Viewer, error) {
-
-	// Gets the viewer from the room.
-	cmd := repo.client.B().JsonGet().
-		Key("rooms:" + roomID).
-		Paths("$.viewers." + userID).Build()
-
-	// Use the command.
-	var viewer domain.Viewer
-	if err := repo.client.Do(context.Background(), cmd).DecodeJSON(&viewer); err != nil {
-
-		// Check if the room wasn't found.
-		if err.Error() == "new objects must be created at the root" {
-			return nil, domain.ProblemDetail{
-				Type: domain.PDTypeRoomDoesntExist,
-			}
-		}
-
-		// Check if the viewer wasn't found.
-		if rueidis.IsRedisNil(err) {
-			return nil, domain.ProblemDetail{
-				Type: domain.PDTypeViewerDoesntExist,
-			}
-		}
-
-		return &viewer, errors.Wrap(err, "cannot get viewer")
-	}
-
-	return &viewer, nil
-}
-
-func (repo *cacheRepository) DeleteViewer(roomID, userID string) error {
-
-	// Deletes the viewer.
-	cmd := repo.client.B().JsonDel().
-		Key("rooms:" + roomID).
-		Path("$.viewers." + userID).Build()
-
-	// Use the command.
-	if err := repo.client.Do(context.Background(), cmd).Error(); err != nil {
-
-		// Check if the room wasn't found.
-		if err.Error() == "new objects must be created at the root" {
-			return domain.ProblemDetail{
-				Type: domain.PDTypeRoomDoesntExist,
-			}
-		}
-
-		// Check if the viewer wasn't found.
-		if rueidis.IsRedisNil(err) {
-			return domain.ProblemDetail{
-				Type: domain.PDTypeViewerDoesntExist,
-			}
-		}
-
-		return errors.Wrap(err, "cannot delete viewer")
-	}
-
-	return nil
+	err = repo.client.Publish(ctx, topic, b).Err()
+	return errors.Wrap(err, "cannot publish message")
 }

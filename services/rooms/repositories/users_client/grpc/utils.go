@@ -8,25 +8,24 @@ import (
 	pb "rooms/proto/users.com"
 )
 
-// getProblemDetail returns true if the given error is a GRPC status and has a problem-detail.
-func (repo *usersClientRepository) getProblemDetail(err error) (domain.ProblemDetail, bool) {
+// getProblemDetail checks if err as a Status has a ProblemDetail, if so returns it.
+func (repo *usersClientRepository) getProblemDetail(err error) *domain.ProblemDetail {
 
-	// Check if the error is a GRPC status.
+	// Create a Status from the error.
 	s, ok := status.FromError(err)
 	if !ok {
-		return domain.ProblemDetail{}, false
+		return nil
 	}
 
+	// Check the Status's details for a ProblemDetail.
 	for _, detail := range s.Details() {
-
-		// Check if the detail is a problem-detail. If so return a copy of it.
-		if problemDetail, ok := detail.(*pb.ProblemDetail); ok {
-			return domain.ProblemDetail{
-				Type:   problemDetail.Type,
-				Detail: problemDetail.Detail,
-			}, true
+		if pd, ok := detail.(*pb.ProblemDetail); ok {
+			return &domain.ProblemDetail{
+				Problem: pd.Problem,
+				Detail:  pd.Detail,
+			}
 		}
 	}
 
-	return domain.ProblemDetail{}, false
+	return nil
 }

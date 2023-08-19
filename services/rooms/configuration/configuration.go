@@ -7,24 +7,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Configuration struct {
-	HTTPPort        int           `required:"true" split_words:"true"`
-	HTTPPongTimeout time.Duration `required:"true" split_words:"true"`
+type Config struct {
+	Port            int           `required:"true" split_words:"true"`
+	ReadTimeout     time.Duration `required:"true" split_words:"true"`
+	WriteTimeout    time.Duration `required:"true" split_words:"true"`
+	WSCloseTimeout  time.Duration `required:"true" split_words:"true"`
+	ShutdownTimeout time.Duration `required:"true" split_words:"true"`
 
 	UsersGRPCUrl string `required:"true" split_words:"true"`
-	RedisURL     string `required:"true" split_words:"true"`
-	RedisPassw   string `required:"true" split_words:"true"`
+	CacheURL     string `required:"true" split_words:"true"`
+	CachePassw   string `required:"true" split_words:"true"`
 }
 
-// New returns a pointer to a Configuration populated by environment variables.
-func New(prefix string) (*Configuration, error) {
-
-	var c Configuration
-
-	// Populate the configuration with environment variables.
-	if err := envconfig.Process(prefix, &c); err != nil {
-		return nil, errors.Wrap(err, "cannot process configuration")
-	}
-
-	return &c, nil
+// NewConfig returns a Config populated with environment variables.
+func NewConfig(prefix string) (*Config, error) {
+	var c Config
+	err := envconfig.Process(prefix, &c)
+	return &c, errors.Wrap(err, "cannot generate configuration")
 }

@@ -1,15 +1,19 @@
 package domain
 
-type CacheRepository interface {
-	InsertRoom(room *Room) error
-	GetRoom(roomID string) (*Room, error)
-	DeleteRoom(roomID string) error
-
-	InsertViewer(roomID string, viewer *Viewer) error
-	GetViewer(roomID, viewerID string) (*Viewer, error)
-	DeleteViewer(roomID, viewerID string) error
-}
+import "context"
 
 type UsersClientRepository interface {
-	GetSelf(sessionID string, fields []string) (*User, error)
+	AuthenticateUser(ctx context.Context, sessionID string, fields ...string) (*User, error)
+}
+
+type CacheRepository interface {
+	InsertRoom(ctx context.Context, room *Room) error
+	GetRoom(ctx context.Context, roomID string) (*Room, error)
+	DeleteRoom(ctx context.Context, roomID string) error
+
+	AddUserToRoom(ctx context.Context, roomID, userID string) error
+	RemoveUserFromRoom(ctx context.Context, roomID, userID string) error
+
+	SubToRoomEvents(ctx context.Context, eventChan chan ChanMsg[*RoomEvent], roomID string)
+	Publish(ctx context.Context, topic string, event any) error
 }
