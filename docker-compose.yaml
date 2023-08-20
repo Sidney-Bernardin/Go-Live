@@ -83,7 +83,7 @@ services:
 
       USERS_SESSION_LENGTH: "720m"
 
-      USERS_DATABASE_TIMEOUT: "10s"
+      USERS_DB_CONN_TIMEOUT: "10s"
       USERS_MONGO_URL: "mongodb://users-db:27017/"
     ports:
       - 8010:8010

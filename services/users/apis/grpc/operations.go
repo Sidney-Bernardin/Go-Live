@@ -9,7 +9,7 @@ import (
 func (a *api) AuthenticateUser(ctx context.Context, req *pb.AuthenticateUserRequest) (*pb.User, error) {
 
 	// Authenticate the Session-ID's User.
-	user, err := a.service.AuthenticateUser(req.GetSessionID(), req.GetFields()...)
+	user, err := a.service.AuthenticateUser(ctx, req.GetSessionID(), req.GetFields()...)
 	if err != nil {
 		return nil, a.err(err)
 	}

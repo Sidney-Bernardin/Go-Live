@@ -27,7 +27,7 @@ type databaseRepository struct {
 
 func NewDatabaseRepository(config *configuration.Config) (domain.DatabaseRepository, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.DatabaseTimeout))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.DBConnTimeout))
 	defer cancel()
 
 	// Connect to MongoDB.

@@ -14,6 +14,11 @@ import (
 	pb "users/proto/users.com"
 )
 
+type API interface {
+	Serve() error
+	Shutdown()
+}
+
 type api struct {
 	pb.UnimplementedUsersServer
 	server  *grpc.Server
@@ -23,21 +28,23 @@ type api struct {
 	address string
 }
 
-func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *api {
+func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) API {
 
 	// Create an api.
 	a := &api{
 		logger:  l,
+		server:  grpc.NewServer(),
 		service: svc,
 		address: fmt.Sprintf("0.0.0.0:%v", config.GRPCPort),
 	}
 
-	// Create a server.
-	svr := grpc.NewServer()
-	pb.RegisterUsersServer(svr, a)
-	reflection.Register(svr)
+	if config.Mock {
+		pb.RegisterUsersServer(a.server, &mockAPI{})
+	} else {
+		pb.RegisterUsersServer(a.server, a)
+	}
 
-	a.server = svr
+	reflection.Register(a.server)
 	return a
 }
 

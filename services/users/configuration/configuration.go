@@ -8,16 +8,18 @@ import (
 )
 
 type Config struct {
-	ShutdownTimeout  time.Duration `required:"true" split_words:"true"`
+	Mock            bool          `default:"false" split_words:"true"`
+	ShutdownTimeout time.Duration `default:"5s" split_words:"true"`
+
 	HTTPPort         int           `required:"true" split_words:"true"`
-	HTTPReadTimeout  time.Duration `required:"true" split_words:"true"`
-	HTTPWriteTimeout time.Duration `required:"true" split_words:"true"`
+	HTTPReadTimeout  time.Duration `default:"15s" split_words:"true"`
+	HTTPWriteTimeout time.Duration `default:"15s" split_words:"true"`
 	GRPCPort         int           `required:"true" split_words:"true"`
 
-	SessionLength time.Duration `required:"true" split_words:"true"`
+	SessionLength time.Duration `default:"720m" split_words:"true"`
 
-	DatabaseTimeout time.Duration `required:"true" split_words:"true"`
-	MongoURL        string        `required:"true" split_words:"true"`
+	DBConnTimeout time.Duration `default:"10s" split_words:"true"`
+	MongoURL      string        `default:"mongodb://localhost:27017/" split_words:"true"`
 }
 
 // NewConfig returns a Config populated with environment variables.
