@@ -50,7 +50,9 @@ services:
   rooms:
     container_name: rooms
     image: ${REGISTRY}/rooms
-    build: ./services/rooms
+    build:
+      context: ./services/rooms
+      dockerfile: ${BUILD_MODE}.dockerfile
     environment:
       ROOMS_PORT: "8020"
       ROOMS_READ_TIMEOUT: "15s"
@@ -63,10 +65,12 @@ services:
       ROOMS_CACHE_PASSW: ""
     ports:
       - 8020:8020
-    command: ./service
+    command: ./app
     depends_on:
       - users
       - rooms-cache
+
+  # ==========================================================================
 
   users:
     container_name: users
