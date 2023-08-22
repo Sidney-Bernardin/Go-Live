@@ -8,15 +8,15 @@ import (
 )
 
 type Config struct {
-	Port            int           `required:"true" split_words:"true"`
-	ReadTimeout     time.Duration `required:"true" split_words:"true"`
-	WriteTimeout    time.Duration `required:"true" split_words:"true"`
-	WSCloseTimeout  time.Duration `required:"true" split_words:"true"`
-	ShutdownTimeout time.Duration `required:"true" split_words:"true"`
+	Port            int           `default:"8080" split_words:"true"`
+	ReadTimeout     time.Duration `default:"15s" split_words:"true"`
+	WriteTimeout    time.Duration `default:"15s" split_words:"true"`
+	WSCloseTimeout  time.Duration `default:"5s" split_words:"true"`
+	ShutdownTimeout time.Duration `default:"5s" split_words:"true"`
 
-	UsersGRPCUrl string `required:"true" split_words:"true"`
-	CacheURL     string `required:"true" split_words:"true"`
-	CachePassw   string `required:"true" split_words:"true"`
+	UsersGRPCUrl string `default:"localhost:9000" split_words:"true"`
+	CacheURL     string `default:"localhost:6379" split_words:"true"`
+	CachePassw   string `default:"" split_words:"true"`
 }
 
 // NewConfig returns a Config populated with environment variables.

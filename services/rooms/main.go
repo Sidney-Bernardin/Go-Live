@@ -57,21 +57,19 @@ func main() {
 	// Send interrupt and termination signals to signalChan.
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
+	// Wait for a signal or error from the channels.
 	select {
-
-	case err := <-apiErrChan:
-		logger.Fatal().Stack().Err(err).Msg("API crashed")
-
-	// Shutdown the API when an OS signal is recived.
 	case <-signalChan:
-		logger.Info().Msg("Shutting down")
+	case err := <-apiErrChan:
+		logger.Error().Stack().Err(err).Msg("API crashed")
+	}
 
-		ctx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
-		defer cancel()
+	logger.Info().Msg("Shutting down")
+	ctx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
+	defer cancel()
 
-		// Shutdown the API.
-		if err := httpAPI.Shutdown(ctx); err != nil {
-			logger.Error().Stack().Err(err).Msg("Error during shutdown")
-		}
+	// Shutdown the API.
+	if err := httpAPI.Shutdown(ctx); err != nil {
+		logger.Error().Stack().Err(err).Msg("Error during shutdown")
 	}
 }
