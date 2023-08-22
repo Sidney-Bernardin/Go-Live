@@ -6,7 +6,7 @@ WORKDIR /app
 COPY go.* .
 RUN go mod download 
 
-# Copy over the application to build it.
+# Copy over the source code to build it.
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
     go build -o app . 

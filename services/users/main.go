@@ -30,18 +30,14 @@ func main() {
 		logger.Fatal().Stack().Err(err).Msg("Cannot create configuration")
 	}
 
-	var svc domain.Service
-	if !config.Mock {
-
-		// Create a mongo database repository.
-		databaseRepo, err := mongo.NewDatabaseRepository(config)
-		if err != nil {
-			logger.Fatal().Stack().Err(err).Msg("Cannot create mongo database repository")
-		}
-
-		// Create a Service.
-		svc = domain.NewService(config, databaseRepo)
+	// Create a mongo database repository.
+	databaseRepo, err := mongo.NewDatabaseRepository(config)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Cannot create mongo database repository")
 	}
+
+	// Create a Service.
+	svc := domain.NewService(config, databaseRepo)
 
 	var (
 		apiErrChan = make(chan error)
@@ -64,18 +60,11 @@ func main() {
 	// Send interrupt and termination signals to the signal-channel.
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	// Wait for a signal or non-nil error from the channels.
-	for {
-		select {
-		case <-signalChan:
-		case err := <-apiErrChan:
-			if err == nil {
-				continue
-			}
-			logger.Error().Stack().Err(err).Msg("An API crashed")
-		}
-
-		break
+	// Wait for a signal or error from the channels.
+	select {
+	case <-signalChan:
+	case err := <-apiErrChan:
+		logger.Error().Stack().Err(err).Msg("API crashed")
 	}
 
 	logger.Info().Msg("Shutting down")

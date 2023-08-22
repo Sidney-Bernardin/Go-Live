@@ -8,7 +8,6 @@ import (
 )
 
 type Config struct {
-	Mock            bool          `default:"false" split_words:"true"`
 	ShutdownTimeout time.Duration `default:"5s" split_words:"true"`
 
 	HTTPPort         int           `required:"true" split_words:"true"`

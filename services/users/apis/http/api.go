@@ -20,8 +20,6 @@ type api struct {
 	router  *mux.Router
 	service domain.Service
 	logger  *zerolog.Logger
-
-	mock bool
 }
 
 func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *api {
@@ -36,11 +34,11 @@ func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service)
 		service: svc,
 		router:  mux.NewRouter(),
 		logger:  l,
-		mock:    config.Mock,
 	}
 
 	a.server.Handler = a
 	a.doRoutes()
+
 	return a
 }
 
@@ -50,10 +48,6 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Start starts the api's server.
 func (a *api) Serve() error {
-
-	if a.mock {
-		return nil
-	}
 
 	// Create a listener.
 	ln, err := net.Listen("tcp", a.server.Addr)
