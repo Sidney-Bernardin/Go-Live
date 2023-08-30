@@ -31,10 +31,12 @@ func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service)
 
 	// Create an api.
 	a := &api{
-		service:        svc,
-		router:         mux.NewRouter(),
-		logger:         l,
-		upgrader:       &websocket.Upgrader{},
+		service: svc,
+		router:  mux.NewRouter(),
+		logger:  l,
+		upgrader: &websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
 		wsCloseTimeout: config.WSCloseTimeout,
 	}
 
