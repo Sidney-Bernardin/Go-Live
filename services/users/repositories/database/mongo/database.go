@@ -69,7 +69,7 @@ func (repo *databaseRepository) GetUser(ctx context.Context, userIDHex string, f
 	)
 
 	// Find the User-ID's User.
-	err := repo.usersColl.FindOne(ctx, bson.M{"_id": userID}, opts).Decode(user)
+	err := repo.usersColl.FindOne(ctx, bson.M{"_id": userID}, opts).Decode(&user)
 	if err != nil {
 
 		// Check if the User wasn't found.
@@ -134,6 +134,7 @@ func (repo *databaseRepository) SearchUsers(ctx context.Context, username string
 		}
 
 		user.ID = user.MongoID.Hex()
+		users = append(users, user)
 	}
 
 	return users, errors.Wrap(cursor.Err(), "cursor error")
