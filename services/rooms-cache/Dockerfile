@@ -1,1 +1,1 @@
-FROM redislabs/redismod
+FROM redis:latest

@@ -7,9 +7,9 @@ type User struct {
 }
 
 type Room struct {
-	ID    string   `json:"id,omitempty"`
-	Name  string   `json:"name" redis:"key1"`
-	Users []string `json:"users" redis:"key2"`
+	ID      string     `json:"id,omitempty" redis:"key1,id"`
+	Name    string     `json:"name,omitempty" redis:"name,key2"`
+	Viewers []string`json:"users,omitempty"`
 }
 
 type ChanMsg[T any] struct {

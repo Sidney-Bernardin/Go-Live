@@ -25,9 +25,21 @@ func NewCacheRepository(config *configuration.Config) domain.CacheRepository {
 	return &cacheRepository{client}
 }
 
-// InsertRoom sets room.
+// InsertRoom inserts room's basic fields as a redis hash.
 func (repo *cacheRepository) InsertRoom(ctx context.Context, room *domain.Room) error {
-	err := repo.client.HSet(ctx, "rooms:"+room.ID, room).Err()
+
+	// Check if the Room already exists.
+	exists, err := repo.client.Exists(ctx, "rooms:"+room.ID).Result()
+	if err != nil {
+		return errors.Wrap(err, "cannot check if room exists")
+	}
+
+	if exists == 1 {
+		return domain.ProblemDetail{Problem: domain.ProblemRoomAlreadyExists}
+	}
+
+	// Inserts the Room's basic fields as a redis hash.
+	err = repo.client.HSet(ctx, "rooms:"+room.ID, room).Err()
 	return errors.Wrap(err, "cannot set room")
 }
 
@@ -38,19 +50,39 @@ func (repo *cacheRepository) DeleteRoom(ctx context.Context, roomID string) erro
 }
 
 // GetRoom gets roomID's Room.
-func (repo *cacheRepository) GetRoom(ctx context.Context, roomID string) (room *domain.Room, err error) {
-	err = repo.client.HGetAll(ctx, "rooms:"+roomID).Scan(&room)
-	return room, errors.Wrap(err, "cannot get room")
+func (repo *cacheRepository) GetRoom(ctx context.Context, roomID string) (*domain.Room, error) {
+
+	// Get the Room's hash.
+	cmd := repo.client.HGetAll(ctx, "rooms:"+roomID)
+	if err := cmd.Err(); err != nil {
+		return nil, errors.Wrap(err, "cannot get room")
+	}
+
+	// Check if the Room wasn't found.
+	if len(cmd.Val()) == 0 {
+		return nil, domain.ProblemDetail{Problem: domain.ProblemRoomDoesntExist}
+	}
+
+	// Decode the Room's hash.
+	var room domain.Room
+	err := cmd.Scan(&room)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot decode room")
+	}
+
+	// Get the Room's list of viewers.
+	room.Viewers, err = repo.client.LRange(ctx, "rooms:"+roomID+":viewers", 0, -1).Result()
+	return &room, errors.Wrap(err, "cannot get list of viewers")
 }
 
-// AddUserToRoom pushes userID to the Users list.
-func (repo *cacheRepository) AddUserToRoom(ctx context.Context, roomID, userID string) error {
-	err := repo.client.LPush(ctx, "rooms:"+roomID+":viewers", userID).Err()
+// AddViewerToRoom pushes userID to the viewers list of roomID's Room.
+func (repo *cacheRepository) AddViewerToRoom(ctx context.Context, roomID, userID string) error {
+	err := repo.client.RPush(ctx, "rooms:"+roomID+":viewers", userID).Err()
 	return errors.Wrap(err, "cannot push viewer")
 }
 
-// AddUserToRoom removes userID from the Users list.
-func (repo *cacheRepository) RemoveUserFromRoom(ctx context.Context, roomID, userID string) error {
+// AddViewerToRoom removes userID from the Users list.
+func (repo *cacheRepository) RemoveViewerFromRoom(ctx context.Context, roomID, userID string) error {
 	err := repo.client.LRem(ctx, "rooms:"+roomID+":viewers", 0, userID).Err()
 	return errors.Wrap(err, "cannot remove viewer")
 }

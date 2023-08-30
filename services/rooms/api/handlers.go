@@ -18,7 +18,8 @@ func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
 func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Create a Room for the Session-ID's User.
-	if err := a.service.CreateRoom(r.Context(), r.FormValue("key"), r.FormValue("name")); err != nil {
+	err := a.service.CreateRoom(r.Context(), r.FormValue("key"), r.FormValue("name"))
+	if err != nil {
 		a.httpErr(w, errors.Wrap(err, "cannot create room"))
 		return
 	}
