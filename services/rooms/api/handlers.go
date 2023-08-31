@@ -61,8 +61,8 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Get the room and session IDs from the request's URL.
 	urlVals := r.URL.Query()
-	sessionID := urlVals.Get("session_id")
-	roomID := urlVals.Get("room_id")
+	sessionID := urlVals.Get("sid")
+	roomID := mux.Vars(r)["room_id"]
 
 	// Have the Session-ID's User join the Room-ID's Room.
 	userID, err := a.service.JoinRoom(r.Context(), sessionID, roomID)

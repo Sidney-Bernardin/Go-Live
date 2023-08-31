@@ -49,11 +49,11 @@ func (svc *service) CreateRoom(ctx context.Context, sessionID, videoStreamID str
 	}
 
 	// Make sure the User doesn't create a room for someone elses account.
-	// if user.ID != videoStreamID {
-	// 	return ProblemDetail{
-	// 		Problem: ProblemUnauthorized,
-	// 	}
-	// }
+	if user.ID != videoStreamID {
+		return ProblemDetail{
+			Problem: ProblemUnauthorized,
+		}
+	}
 
 	// Insert a new Room for the User into the cache.
 	err = svc.cacheRepo.InsertRoom(ctx, &Room{

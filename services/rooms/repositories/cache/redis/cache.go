@@ -43,10 +43,17 @@ func (repo *cacheRepository) InsertRoom(ctx context.Context, room *domain.Room) 
 	return errors.Wrap(err, "cannot set room")
 }
 
-// DeleteRoom deletes roomID's Room.
+// DeleteRoom deletes the hash and list for roomID's Room.
 func (repo *cacheRepository) DeleteRoom(ctx context.Context, roomID string) error {
-	err := repo.client.Del(ctx, "rooms:"+roomID).Err()
-	return errors.Wrap(err, "cannot delete room")
+
+	// Delete the Room's hash.
+	if err := repo.client.Del(ctx, "rooms:"+roomID).Err(); err != nil {
+		return errors.Wrap(err, "cannot delete room")
+	}
+
+	// Delete the Room's viewers list.
+	err := repo.client.Del(ctx, "rooms:"+roomID+":viewers").Err()
+	return errors.Wrap(err, "cannot delete room viewers")
 }
 
 // GetRoom gets roomID's Room.
@@ -81,7 +88,7 @@ func (repo *cacheRepository) AddViewerToRoom(ctx context.Context, roomID, userID
 	return errors.Wrap(err, "cannot push viewer")
 }
 
-// AddViewerToRoom removes userID from the Users list.
+// AddViewerToRoom removes userID from the Users list of roomID's Room.
 func (repo *cacheRepository) RemoveViewerFromRoom(ctx context.Context, roomID, userID string) error {
 	err := repo.client.LRem(ctx, "rooms:"+roomID+":viewers", 0, userID).Err()
 	return errors.Wrap(err, "cannot remove viewer")

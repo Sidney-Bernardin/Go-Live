@@ -8,6 +8,6 @@ func (a *api) doRoutes() {
 	a.router.HandleFunc("/create", a.handleCreateRoom).Methods("POST")
 	a.router.HandleFunc("/delete", a.handleDeleteRoom).Methods("POST")
 
-	a.router.HandleFunc("/join", a.handleJoinRoom).Methods("GET")
-	a.router.HandleFunc("/all/{room_id}", a.handleGetRoom).Methods("GET")
+	a.router.HandleFunc("/{room_id}", a.handleGetRoom).Methods("GET")
+	a.router.HandleFunc("/join/{room_id}", a.handleJoinRoom).Methods("GET")
 }
