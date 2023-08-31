@@ -89,9 +89,10 @@ func (a *api) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleGetUser(w http.ResponseWriter, r *http.Request) {
 
-	// Get the User-ID and fields from the request's URL.
-	userID := mux.Vars(r)["user_id"]
-	fields := r.URL.Query().Get("fields")
+	var (
+		userID = mux.Vars(r)["user_id"]
+		fields = r.URL.Query().Get("fields")
+	)
 
 	// Get the User-ID's User.
 	user, err := a.service.GetUser(r.Context(), userID, strings.Split(fields, ",")...)
@@ -110,13 +111,14 @@ func (a *api) handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleSearchUsers(w http.ResponseWriter, r *http.Request) {
 
-	// Get arguments from the request's URL.
-	username := mux.Vars(r)["username"]
-	offset := r.URL.Query().Get("offset")
-	limit := r.URL.Query().Get("limit")
-	fields := r.URL.Query().Get("fields")
+	var (
+		username = mux.Vars(r)["username"]
+		offset   = mux.Vars(r)["offset"]
+		limit    = mux.Vars(r)["limit"]
+		fields   = r.URL.Query().Get("fields")
+	)
 
-	// Convert offset to an int.
+	// Convert offset and limit to integers.
 	offsetInt, errA := strconv.Atoi(offset)
 	limitInt, errB := strconv.Atoi(limit)
 	if errA != nil || errB != nil {
@@ -143,9 +145,10 @@ func (a *api) handleSearchUsers(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleAuthenticateUser(w http.ResponseWriter, r *http.Request) {
 
-	// Get the Session-ID and fields from the request's context and URL.
-	sessionID := r.Context().Value(mwBearerToken).(string)
-	fields := r.URL.Query().Get("fields")
+	var (
+		sessionID = r.Context().Value(mwBearerToken).(string)
+		fields    = r.URL.Query().Get("fields")
+	)
 
 	// Authenticate the Session-ID's User.
 	user, err := a.service.AuthenticateUser(r.Context(), sessionID, strings.Split(fields, ",")...)
@@ -164,10 +167,10 @@ func (a *api) handleAuthenticateUser(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleSetProfilePicture(w http.ResponseWriter, r *http.Request) {
 
-	// Get the Session-ID and profile-picture from request's context.
-	ctx := r.Context()
-	sessionID := ctx.Value(mwBearerToken).(string)
-	profilePicture := ctx.Value("profile_picture").([]byte)
+	var (
+		sessionID      = r.Context().Value(mwBearerToken).(string)
+		profilePicture = r.Context().Value("profile_picture").([]byte)
+	)
 
 	// Update the profile-picture of the Session-ID's User.
 	if err := a.service.UpdateProfilePicture(r.Context(), sessionID, profilePicture); err != nil {

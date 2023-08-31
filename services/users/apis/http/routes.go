@@ -8,9 +8,9 @@ func (a *api) doRoutes() {
 	a.router.HandleFunc("/signup", a.handleSignup).Methods("POST")
 	a.router.HandleFunc("/signin", a.handleSignin).Methods("POST")
 
-	a.router.HandleFunc("/all", a.handleSearchUsers).Methods("GET")
-	a.router.HandleFunc("/all/{user_id}", a.handleGetUser).Methods("GET")
-	a.router.HandleFunc("/all/{user_id}/picture", a.handleGetProfilePicture).Methods("GET")
+	a.router.HandleFunc("/{username}/{offset}/{limit}", a.handleSearchUsers).Methods("GET")
+	a.router.HandleFunc("/{user_id}", a.handleGetUser).Methods("GET")
+	a.router.HandleFunc("/{user_id}/picture", a.handleGetProfilePicture).Methods("GET")
 
 	auth := a.router.PathPrefix("/auth").Subrouter()
 	auth.Use(a.getBearerToken)
