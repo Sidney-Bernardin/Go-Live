@@ -268,7 +268,12 @@ func (repo *databaseRepository) UpdateProfilePicture(ctx context.Context, userID
 		}
 	}
 
-	// Create an gridfs UploadStream with the User's profile-picture-ID.
+	// Delete the User's previous profile picture.
+	if err := bucket.Delete(user.MongoProfilePictureID); err != nil {
+		return errors.Wrap(err, "cannot create upload stream")
+	}
+
+	// Create a gridfs UploadStream with the User's profile-picture-ID.
 	uploadStream, err := bucket.OpenUploadStreamWithID(user.MongoProfilePictureID, user.Username)
 	if err != nil {
 		return errors.Wrap(err, "cannot create upload stream")

@@ -17,7 +17,7 @@ func (a *api) doRoutes() {
 	auth.HandleFunc("/", a.handleAuthenticateUser).Methods("GET")
 	auth.HandleFunc("/logout", a.handleLogout).Methods("DELETE")
 
-	postPicture := auth.PathPrefix("/picture").Subrouter()
-	postPicture.Use(a.getFormFile("profile_picture", 10<<20))
-	postPicture.HandleFunc("/", a.handleSetProfilePicture).Methods("PUT")
+	updatePicture := auth.PathPrefix("/picture").Subrouter()
+	updatePicture.Use(a.getFormFile("profile_picture", 10<<20))
+	updatePicture.HandleFunc("/", a.handleUpdateProfilePicture).Methods("PUT")
 }

@@ -165,7 +165,7 @@ func (a *api) handleAuthenticateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *api) handleSetProfilePicture(w http.ResponseWriter, r *http.Request) {
+func (a *api) handleUpdateProfilePicture(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		sessionID      = r.Context().Value(mwBearerToken).(string)

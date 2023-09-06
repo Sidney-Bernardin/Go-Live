@@ -16,7 +16,7 @@ services:
       VITE_USERS_URL: "localhost:8000/users"
       VITE_ROOMS_URL: "localhost:8000/rooms"
     ports:
-      - 3000:3000
+      - 3000:5173
     command: npm run dev
     depends_on:
       - rtmp

@@ -1,50 +1,80 @@
-<script setup>
-import { ref, provide, onMounted } from 'vue'
-import { useStore } from 'vuex'
-
-import Loader from './components/Loader.vue'
-import URICreator from './components/URICreator.vue'
-import Navigation from './components/Navigtion.vue'
-
-import UsersService from './services/UsersService'
-import { removeSessionID } from './utils'
-
-const store = useStore()
-
-const loading = ref(false)
-const showURICreator = ref(false)
-
-provide('loading', loading)
-provide('show_URI_creator', showURICreator)
-
-UsersService.getSelf(['username'])
-  .then((res) => store.dispatch('setSelf', res.data))
-  .catch((err) => {
-    if (err.response?.data.type == 'unauthorized') {
-      removeSessionID()
-      store.dispatch('setSelf', null)
-      return
-    }
-
-    store.dispatch('handleError', err)
-  })
+<script setup lang="ts">
+import NavBar from "./components/NavBar.vue";
+import Chat from "./components/Chat.vue";
+import Explore from "./components/Explore.vue";
 </script>
 
 <template>
-  <div>
-    <Navigation />
-
-    <div class="wrapper">
+  <div class="wrapper">
+    <div class="view">
+      <NavBar />
       <router-view></router-view>
     </div>
 
-    <Loader v-if="loading" />
-    <URICreator v-if="showURICreator" />
+    <div class="right">
+      <Chat />
+      <Explore class="secondary" />
+    </div>
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@import "./style.scss";
+
 .wrapper {
-  margin: 81px 15px 15px 15px;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+
+  .view {
+    position: relative;
+    background: $green;
+    flex: 1;
+
+    .nav-bar {
+      width: 100%;
+    }
+  }
+
+  .right {
+    display: flex;
+    width: 50%;
+    flex: 1;
+    flex-direction: column;
+
+    .chat {
+      flex: 3;
+      transition: 0.2s;
+
+      &.secondary {
+        flex: 1;
+
+        &:hover {
+          flex: 9;
+        }
+      }
+
+      &.disabled {
+        flex: 1;
+
+        &:hover {
+          flex: 1;
+        }
+      }
+    }
+
+    .explore {
+      flex: 3;
+      transition: 0.2s;
+
+      &.secondary {
+        flex: 1;
+
+        &:hover {
+          flex: 9;
+        }
+      }
+    }
+  }
 }
 </style>

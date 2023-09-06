@@ -1,167 +1,105 @@
-<script setup>
-import { ref, reactive, inject } from 'vue'
-import { useRouter } from 'vue-router'
-import { useStore } from 'vuex'
-
-import UsersService from '../services/UsersService'
-
-import axios from 'axios'
-import { setSessionID } from '../utils'
-
-const router = useRouter()
-const store = useStore()
-
-const loading = inject('loading')
-
-const signupForm = reactive({
-  username: '',
-  email: '',
-  password: '',
-})
-
-const signinForm = reactive({
-  username: '',
-  password: '',
-})
-
-const signupError = ref('')
-const signinError = ref('')
-
-const signup = async () => {
-  loading.value = true
-
-  try {
-    const res1 = await UsersService.signup(signupForm)
-    setSessionID(res1.data.session_id)
-
-    const res2 = await UsersService.getSelf(['username'])
-    store.dispatch('setSelf', res2.data)
-
-    router.push({ name: 'Home' })
-  } catch (err) {
-    if (err.response?.data.type == 'invalid_signup_info')
-      signupError.value = err.response.data.detail
-    else store.dispatch('handleError', err)
-  }
-
-  loading.value = false
-}
-
-const signin = async () => {
-  loading.value = true
-
-  try {
-    const res1 = await UsersService.signin(signinForm)
-    setSessionID(res1.data.session_id)
-
-    const res2 = await UsersService.getSelf(['username'])
-    store.dispatch('setSelf', res2.data)
-
-    router.push({ name: 'Home' })
-  } catch (err) {
-    if (err.response?.data.type == 'invalid_signin_info')
-      signinError.value = err.response.data.detail
-    else store.dispatch('handleError', err)
-  }
-
-  loading.value = false
-}
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="login-page">
-    <div class="wrapper">
-      <form @submit.prevent="signup">
-        <h2>Sign Up</h2>
-
-        <label for="username">Username</label>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          v-model="signupForm.username"
-        />
-
-        <label for="email">Email</label>
-        <input
-          type="text"
-          name="email"
-          placeholder="Email"
-          v-model="signupForm.email"
-        />
-
-        <label for="password">Password</label>
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          v-model="signupForm.password"
-        />
-
-        <input type="submit" value="Go!" />
-
-        <p v-if="signupError">⚠ {{ signupError }} ⚠</p>
-      </form>
-
-      <form @submit.prevent="signin">
-        <h2>Sign In</h2>
-
-        <label for="username">Username</label>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          v-model="signinForm.username"
-        />
-
-        <label for="password">Password</label>
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          v-model="signinForm.password"
-        />
-
-        <input type="submit" value="Go!" />
-
-        <p v-if="signinError">⚠ {{ signinError }} ⚠</p>
-      </form>
+    <div class="tabs">
+      <button class="signin-btn">sign-in</button>
+      <button class="signup-btn active">sign-up</button>
     </div>
+
+    <form>
+      <label for="username">Username</label>
+      <input type="text" name="username" placeholder="Username" />
+
+      <label for="email">Email</label>
+      <input type="email" placeholder="Email" />
+
+      <label for="password">Password</label>
+      <input type="password" placeholder="Password" />
+
+      <input type="submit" value="sign-up" />
+    </form>
   </div>
 </template>
 
-<style scoped>
-.wrapper {
+<style scoped lang="scss">
+@import "../style.scss";
+
+.login-page {
   display: flex;
-  gap: 15px;
-  padding-top: 30px;
+  height: 100%;
   justify-content: center;
-}
+  align-items: center;
 
-h2 {
-  margin: 0;
-}
+  .tabs {
+    position: absolute;
+    display: flex;
+    top: 50%;
+    left: 30px;
+    gap: 15px;
+    width: 0;
+    transform: translate(-50%, 50%);
+    justify-content: center;
+    rotate: -90deg;
 
-form {
-  display: flex;
-  width: 200px;
-  border: 2px solid #c1c1c1;
-  border-style: dashed;
-  padding: 10px;
-  flex-direction: column;
-}
+    button {
+      cursor: pointer;
+      border: none;
+      color: $white;
+      background: transparent;
+      font-size: 1.5rem;
+      font-weight: bolder;
+      padding: 0;
+      text-wrap: nowrap;
+      text-transform: uppercase;
+      text-decoration: underline;
 
-input[type='submit'],
-label {
-  margin-top: 5px;
-}
+      &.active {
+        cursor: auto;
+        color: $dark-green;
+        text-decoration: none;
+      }
+    }
+  }
 
-p {
-  color: red;
-  font-weight: bolder;
-  text-transform: uppercase;
-  text-align: center;
-  margin: 5px 0 0 0;
-  overflow-wrap: break-word;
+  form {
+    display: flex;
+    border: 1px solid $black;
+    padding: 30px;
+    flex-direction: column;
+
+    label {
+      font-size: 1.25rem;
+      font-weight: bolder;
+      margin-top: 15px;
+    }
+
+    input {
+      border: 1px solid $black;
+      color: $white;
+      background: transparent;
+      font-size: 1.5rem;
+      font-weight: bolder;
+      padding: 15px;
+
+      &::placeholder {
+        color: $dark-green;
+      }
+
+      &[type="submit"] {
+        cursor: pointer;
+        border: 1px solid $white;
+        margin-top: 30px;
+        text-transform: uppercase;
+        text-decoration: underline;
+
+        &[disabled="true"] {
+          border: 1px solid $dark-green;
+          color: $dark-green;
+          text-decoration: none;
+        }
+      }
+    }
+  }
 }
 </style>
