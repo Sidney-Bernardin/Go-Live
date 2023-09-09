@@ -2,17 +2,20 @@ package http
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"users/domain"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
+	"github.com/pkg/errors"
 )
 
 const (
 	mwBearerToken = iota
+	mwFormValues
+	mwFormFiles
 )
 
 func (a *api) logRequest(next http.Handler) http.Handler {
@@ -40,39 +43,58 @@ func (a *api) getBearerToken(next http.Handler) http.Handler {
 	})
 }
 
-func (a *api) getFormFile(name string, maxSize int64) mux.MiddlewareFunc {
+func (a *api) getFormData(formValues any, formFiles ...string) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			// Parse the request's form data.
-			if err := r.ParseMultipartForm(maxSize); err != nil {
-				a.err(w, domain.ProblemDetail{
-					Problem: domain.ProblemInvalidInput,
-					Detail:  fmt.Sprintf("Cannot parse form data: %v", err)})
+			// Parse the request's form-data.
+			if err := r.ParseMultipartForm(10 << 20); err != nil {
+				a.err(w, errors.Wrap(err, "cannot parse form data"))
 				return
 			}
 
-			// Get the file from the request's form data.
-			file, _, err := r.FormFile(name)
-			if err != nil {
+			// Decode the request's baisc form-data.
+			if err := a.formDocoder.Decode(formValues, r.MultipartForm.Value); err != nil {
 
-				// Check if the file is missing.
-				if err == http.ErrMissingFile {
+				// Check if any values are missing.
+				if err, ok := err.(schema.MultiError); ok {
 					a.err(w, domain.ProblemDetail{
 						Problem: domain.ProblemInvalidInput,
-						Detail:  fmt.Sprintf("Missing the %s file from request form data.", name)})
+						Detail:  err.Error()})
+					return
+				}
+
+				a.err(w, errors.Wrap(err, "cannot decode form data"))
+				return
+			}
+
+			// Decode the request's file form-data.
+			files := map[string][]byte{}
+			for _, name := range formFiles {
+
+				h, ok := r.MultipartForm.File[name]
+				if !ok {
+					continue
+				}
+
+				// Open the file.
+				file, err := h[0].Open()
+				if err != nil {
+					a.err(w, errors.Wrap(err, "cannot open file"))
+					return
+				}
+				defer file.Close()
+
+				// Read the file and add it's bytes to the files-map.
+				if files[name], err = io.ReadAll(file); err != nil {
+					a.err(w, errors.Wrap(err, "cannot read file"))
 					return
 				}
 			}
-			defer file.Close()
 
-			// Get the file's bytes.
-			fileBytes, err := io.ReadAll(file)
-			if err != nil {
-			}
-
-			// Add the file to the request's context and call the next handler.
-			ctx := context.WithValue(r.Context(), name, fileBytes)
+			// Add the all of the form-data to the request's context and call the next handler.
+			ctx := context.WithValue(r.Context(), mwFormValues, formValues)
+			ctx = context.WithValue(ctx, mwFormFiles, files)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

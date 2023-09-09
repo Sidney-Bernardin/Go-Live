@@ -4,9 +4,36 @@ $white: #dbdbdb;
 $dark-white: #bfbfbf;
 $green: #389e70;
 $dark-green: #2e825b;
+$yellow: #c7c964;
 
 body {
   color: $black;
+  font-family: sans-serif;
   margin: 0;
   padding: 0;
+}
+
+@mixin basic-button {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  gap: 5px;
+  border: none;
+  color: $white;
+  background: transparent;
+  font-weight: bolder;
+  padding: 0;
+  text-transform: uppercase;
+  text-decoration: underline;
+  align-items: center;
+
+  &[disabled] {
+    cursor: auto;
+    color: $dark-green;
+    text-decoration: none;
+  }
+
+  img {
+    height: 1em;
+  }
 }

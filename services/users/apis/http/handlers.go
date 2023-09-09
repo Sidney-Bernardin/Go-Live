@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -20,17 +19,13 @@ func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleSignup(w http.ResponseWriter, r *http.Request) {
 
-	// Decode the request's body.
-	var info *domain.SignupInfo
-	if err := json.NewDecoder(r.Body).Decode(&info); err != nil {
-		a.err(w, domain.ProblemDetail{
-			Problem: domain.ProblemInvalidInput,
-			Detail:  fmt.Sprintf("Cannot decode request body: %v", err)})
-		return
-	}
+	var (
+		info      = r.Context().Value(mwFormValues).(*domain.SignupInfo)
+		formFiles = r.Context().Value(mwFormFiles).(map[string][]byte)
+	)
 
 	// Sign-Up a new User.
-	sessionID, err := a.service.Signup(r.Context(), info)
+	sessionID, err := a.service.Signup(r.Context(), info, formFiles["profile_picture"])
 	if err != nil {
 		a.err(w, errors.Wrap(err, "cannot signup user"))
 		return
@@ -47,16 +42,8 @@ func (a *api) handleSignup(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) handleSignin(w http.ResponseWriter, r *http.Request) {
 
-	// Decode the request's body.
-	var info *domain.SigninInfo
-	if err := json.NewDecoder(r.Body).Decode(&info); err != nil {
-		a.err(w, domain.ProblemDetail{
-			Problem: domain.ProblemInvalidInput,
-			Detail:  fmt.Sprintf("Cannot decode request body: '%v", err)})
-		return
-	}
+	info := r.Context().Value(mwFormValues).(*domain.SigninInfo)
 
-	// Sign-In the SigninInfo's User.
 	sessionID, err := a.service.Signin(r.Context(), info)
 	if err != nil {
 		a.err(w, errors.Wrap(err, "cannot signin user"))
@@ -163,23 +150,6 @@ func (a *api) handleAuthenticateUser(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(user); err != nil {
 		a.err(w, errors.Wrap(err, "cannot write response"))
 	}
-}
-
-func (a *api) handleUpdateProfilePicture(w http.ResponseWriter, r *http.Request) {
-
-	var (
-		sessionID      = r.Context().Value(mwBearerToken).(string)
-		profilePicture = r.Context().Value("profile_picture").([]byte)
-	)
-
-	// Update the profile-picture of the Session-ID's User.
-	if err := a.service.UpdateProfilePicture(r.Context(), sessionID, profilePicture); err != nil {
-		a.err(w, errors.Wrap(err, "cannot set profile picture"))
-		return
-	}
-
-	// Respond.
-	w.WriteHeader(http.StatusOK)
 }
 
 func (a *api) handleGetProfilePicture(w http.ResponseWriter, r *http.Request) {

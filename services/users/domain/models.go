@@ -29,14 +29,14 @@ type Session struct {
 }
 
 type SignupInfo struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username string `schema:"username,required"`
+	Email    string `schema:"email,required"`
+	Password string `schema:"password,required"`
 }
 
 type SigninInfo struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `schema:"username,required"`
+	Password string `schema:"password,required"`
 }
 
 type LoginResponse struct {

@@ -26,17 +26,15 @@ import UserCard from "./UserCard.vue";
   justify-content: space-between;
   align-items: center;
 
+  button {
+    font-size: 1.75rem;
+  }
+
   .left {
     display: flex;
     gap: 10px;
     margin-left: 15px;
     align-items: center;
-
-    .user-card {
-      color: $white;
-      text-transform: uppercase;
-      text-decoration: underline;
-    }
 
     span {
       font-size: 2rem;
@@ -54,15 +52,7 @@ import UserCard from "./UserCard.vue";
     margin-right: 15px;
 
     .go-live {
-      cursor: pointer;
-      border: none;
-      color: $white;
-      background: transparent;
-      font-size: 1.75rem;
-      font-weight: bolder;
-      padding: 0;
-      text-transform: uppercase;
-      text-decoration: underline;
+      @include basic-button;
     }
   }
 }

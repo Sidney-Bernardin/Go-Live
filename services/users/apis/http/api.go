@@ -9,6 +9,7 @@ import (
 	"users/domain"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -17,9 +18,12 @@ const svrErrMsg = "Server Error"
 
 type api struct {
 	server  *http.Server
-	router  *mux.Router
 	service domain.Service
-	logger  *zerolog.Logger
+
+	router      *mux.Router
+	formDocoder *schema.Decoder
+
+	logger *zerolog.Logger
 }
 
 func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *api {
@@ -31,9 +35,10 @@ func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service)
 			ReadTimeout:  config.HTTPReadTimeout,
 			WriteTimeout: config.HTTPWriteTimeout,
 		},
-		service: svc,
-		router:  mux.NewRouter(),
-		logger:  l,
+		service:     svc,
+		router:      mux.NewRouter(),
+		formDocoder: schema.NewDecoder(),
+		logger:      l,
 	}
 
 	a.server.Handler = a

@@ -23,6 +23,8 @@ type databaseRepository struct {
 	usersDB      *mongo.Database
 	usersColl    *mongo.Collection
 	sessionsColl *mongo.Collection
+
+	SessionLength time.Duration
 }
 
 func NewDatabaseRepository(config *configuration.Config) (domain.DatabaseRepository, error) {
@@ -44,18 +46,52 @@ func NewDatabaseRepository(config *configuration.Config) (domain.DatabaseReposit
 	usersDB := client.Database("users")
 
 	return &databaseRepository{
-		client:       client,
-		usersDB:      usersDB,
-		usersColl:    usersDB.Collection("users"),
-		sessionsColl: usersDB.Collection("sessions"),
+		client:        client,
+		usersDB:       usersDB,
+		usersColl:     usersDB.Collection("users"),
+		sessionsColl:  usersDB.Collection("sessions"),
+		SessionLength: config.SessionLength,
 	}, nil
 }
 
-// InsertUser inserts user.
-func (repo *databaseRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
+// SignupUser inserts user, a new Session for it, and profilePicture.
+func (repo *databaseRepository) SignupUser(ctx context.Context, profilePicture []byte, user *domain.User) (string, error) {
+
 	user.MongoID = primitive.NewObjectID()
-	_, err := repo.usersColl.InsertOne(ctx, user)
-	return user.MongoID.Hex(), errors.Wrap(err, "cannot insert user")
+	user.MongoProfilePictureID = primitive.NewObjectID()
+
+	if _, err := repo.usersColl.InsertOne(ctx, user); err != nil {
+		return "", errors.Wrap(err, "cannot insert user")
+	}
+
+	// Create a gridfs Bucket.
+	bucket, err := gridfs.NewBucket(repo.usersDB)
+	if err != nil {
+		return "", errors.Wrap(err, "cannot create gridfs bucket")
+	}
+
+	// Open an upload-stream with the User's profile-picture-ID.
+	uploadStream, err := bucket.OpenUploadStreamWithID(user.MongoProfilePictureID, user.Username)
+	if err != nil {
+		return "", errors.Wrap(err, "cannot create upload stream")
+	}
+	defer uploadStream.Close()
+
+	// Write the profile-picture to the upload-stream
+	if _, err := uploadStream.Write(profilePicture); err != nil {
+		return "", errors.Wrap(err, "cannot write to upload stream")
+	}
+
+	// Create a Session for the User.
+	session := &domain.Session{
+		MongoID:     primitive.NewObjectID(),
+		MongoUserID: user.MongoID,
+		ExpireAt:    time.Now().Add(repo.SessionLength),
+	}
+
+	// Insert the Session.
+	_, err = repo.sessionsColl.InsertOne(ctx, session)
+	return session.MongoID.Hex(), errors.Wrap(err, "cannot insert session")
 }
 
 // GetUser finds userID's User.
@@ -225,64 +261,6 @@ func (repo *databaseRepository) DeleteSession(ctx context.Context, sessionIDHex 
 	sessionID, _ := primitive.ObjectIDFromHex(sessionIDHex)
 	_, err := repo.sessionsColl.DeleteOne(ctx, bson.M{"_id": sessionID})
 	return errors.Wrap(err, "cannot delete session")
-}
-
-// UpdateProfilePicture writes profilePicture to the profile-picture file of userIDHex's User.
-func (repo *databaseRepository) UpdateProfilePicture(ctx context.Context, userIDHex string, profilePicture []byte) error {
-
-	var (
-		user      *domain.User
-		userID, _ = primitive.ObjectIDFromHex(userIDHex)
-	)
-
-	// Find the User-ID's User.
-	err := repo.usersColl.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
-	if err != nil {
-
-		// Check if the User wasn't found.
-		if err == mongo.ErrNoDocuments {
-			return domain.ProblemDetail{Problem: domain.ProblemUserDoesntExist}
-		}
-
-		return errors.Wrap(err, "cannot find user")
-	}
-
-	// Create a gridfs Bucket.
-	bucket, err := gridfs.NewBucket(repo.usersDB)
-	if err != nil {
-		return errors.Wrap(err, "cannot create gridfs bucket")
-	}
-
-	// Check if a new ID needs to be generated for the profile picture's file.
-	if user.MongoProfilePictureID == primitive.NilObjectID {
-
-		user.MongoProfilePictureID = primitive.NewObjectID()
-
-		// Update the User's profile-picture-ID to the new one.
-		_, err = repo.usersColl.UpdateByID(ctx, userID, bson.M{
-			"$set": bson.M{"profile_picture_id": user.MongoProfilePictureID},
-		})
-
-		if err != nil {
-			return errors.Wrap(err, "cannot update user")
-		}
-	}
-
-	// Delete the User's previous profile picture.
-	if err := bucket.Delete(user.MongoProfilePictureID); err != nil {
-		return errors.Wrap(err, "cannot create upload stream")
-	}
-
-	// Create a gridfs UploadStream with the User's profile-picture-ID.
-	uploadStream, err := bucket.OpenUploadStreamWithID(user.MongoProfilePictureID, user.Username)
-	if err != nil {
-		return errors.Wrap(err, "cannot create upload stream")
-	}
-	defer uploadStream.Close()
-
-	// Write the profile picture to the UploadStream.
-	_, err = uploadStream.Write(profilePicture)
-	return errors.Wrap(err, "cannot write to upload stream")
 }
 
 // GetProfilePicture gets the profile picture file of userIDHex's User.

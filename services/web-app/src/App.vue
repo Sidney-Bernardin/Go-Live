@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavBar from "./components/NavBar.vue";
+import Footer from "./components/Footer.vue";
 import Chat from "./components/Chat.vue";
 import Explore from "./components/Explore.vue";
 </script>
@@ -9,6 +10,7 @@ import Explore from "./components/Explore.vue";
     <div class="view">
       <NavBar />
       <router-view></router-view>
+      <Footer />
     </div>
 
     <div class="right">
@@ -42,7 +44,8 @@ import Explore from "./components/Explore.vue";
     flex: 1;
     flex-direction: column;
 
-    .chat {
+    .chat,
+    .explore {
       flex: 3;
       transition: 0.2s;
 
@@ -59,19 +62,6 @@ import Explore from "./components/Explore.vue";
 
         &:hover {
           flex: 1;
-        }
-      }
-    }
-
-    .explore {
-      flex: 3;
-      transition: 0.2s;
-
-      &.secondary {
-        flex: 1;
-
-        &:hover {
-          flex: 9;
         }
       }
     }
