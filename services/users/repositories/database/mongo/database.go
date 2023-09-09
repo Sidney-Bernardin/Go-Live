@@ -54,8 +54,8 @@ func NewDatabaseRepository(config *configuration.Config) (domain.DatabaseReposit
 	}, nil
 }
 
-// SignupUser inserts user, a new Session for it, and profilePicture.
-func (repo *databaseRepository) SignupUser(ctx context.Context, profilePicture []byte, user *domain.User) (string, error) {
+// CreateAccount inserts user, a new Session for it, and profilePicture.
+func (repo *databaseRepository) CreateAccount(ctx context.Context, profilePicture []byte, user *domain.User) (string, error) {
 
 	user.MongoID = primitive.NewObjectID()
 	user.MongoProfilePictureID = primitive.NewObjectID()
@@ -92,6 +92,90 @@ func (repo *databaseRepository) SignupUser(ctx context.Context, profilePicture [
 	// Insert the Session.
 	_, err = repo.sessionsColl.InsertOne(ctx, session)
 	return session.MongoID.Hex(), errors.Wrap(err, "cannot insert session")
+}
+
+// DeleteAccount deletes the User, profile-picture, and all Sessions associated
+// with userID's User.
+func (repo *databaseRepository) DeleteAccount(ctx context.Context, userIDHex string) error {
+
+	var (
+		user      *domain.User
+		userID, _ = primitive.ObjectIDFromHex(userIDHex)
+	)
+
+	// Find the User-ID's User.
+	err := repo.usersColl.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+
+		// Check if the User wasn't found.
+		if err == mongo.ErrNoDocuments {
+			return domain.ProblemDetail{Problem: domain.ProblemUserDoesntExist}
+		}
+
+		return errors.Wrap(err, "cannot find user")
+	}
+
+	// Create a gridfs Bucket.
+	bucket, err := gridfs.NewBucket(repo.usersDB)
+	if err != nil {
+		return errors.Wrap(err, "cannot create gridfs bucket")
+	}
+
+	// Delete the User's profile-picture.
+	err = bucket.Delete(user.MongoProfilePictureID)
+	if err != nil && err != gridfs.ErrFileNotFound {
+		return errors.Wrap(err, "cannot delete gridfs file")
+	}
+
+	// Delete all of the User's Sessions.
+	if _, err = repo.sessionsColl.DeleteMany(ctx, bson.M{"user_id": userID}); err != nil {
+		return errors.Wrap(err, "cannot delete session")
+	}
+
+	// Delete the User.
+	_, err = repo.usersColl.DeleteOne(ctx, bson.M{"_id": userID})
+	return errors.Wrap(err, "cannot delete user")
+}
+
+// GetUserBySession finds sessionIDHex's User.
+func (repo *databaseRepository) GetUserBySession(ctx context.Context, sessionIDHex string, projection ...string) (*domain.User, error) {
+
+	var (
+		session      *domain.Session
+		sessionID, _ = primitive.ObjectIDFromHex(sessionIDHex)
+	)
+
+	// Find the Session-ID's Session.
+	err := repo.sessionsColl.FindOne(ctx, bson.M{"_id": sessionID}).Decode(&session)
+	if err != nil {
+
+		// Check if the Session wasn't found.
+		if err == mongo.ErrNoDocuments {
+			return nil, domain.ProblemDetail{Problem: domain.ProblemSessionDoesntExist}
+		}
+
+		return nil, errors.Wrap(err, "cannot find session")
+	}
+
+	var (
+		user *domain.User
+		opts = options.FindOne().SetProjection(repo.bsonProjection(projection...))
+	)
+
+	// Find the User of the Sessions's User-ID.
+	err = repo.usersColl.FindOne(ctx, bson.M{"_id": session.MongoUserID}, opts).Decode(&user)
+	if err != nil {
+
+		// Check if the User wasn't found.
+		if err == mongo.ErrNoDocuments {
+			return nil, domain.ProblemDetail{Problem: domain.ProblemUserDoesntExist}
+		}
+
+		return nil, errors.Wrap(err, "cannot find user")
+	}
+
+	user.ID = user.MongoID.Hex()
+	return user, nil
 }
 
 // GetUser finds userID's User.
@@ -174,47 +258,6 @@ func (repo *databaseRepository) SearchUsers(ctx context.Context, username string
 	}
 
 	return users, errors.Wrap(cursor.Err(), "cursor error")
-}
-
-// GetUserBySession finds sessionIDHex's User.
-func (repo *databaseRepository) GetUserBySession(ctx context.Context, sessionIDHex string, projection ...string) (*domain.User, error) {
-
-	var (
-		session      *domain.Session
-		sessionID, _ = primitive.ObjectIDFromHex(sessionIDHex)
-	)
-
-	// Find the Session-ID's Session.
-	err := repo.sessionsColl.FindOne(ctx, bson.M{"_id": sessionID}).Decode(&session)
-	if err != nil {
-
-		// Check if the Session wasn't found.
-		if err == mongo.ErrNoDocuments {
-			return nil, domain.ProblemDetail{Problem: domain.ProblemSessionDoesntExist}
-		}
-
-		return nil, errors.Wrap(err, "cannot find session")
-	}
-
-	var (
-		user *domain.User
-		opts = options.FindOne().SetProjection(repo.bsonProjection(projection...))
-	)
-
-	// Find the User of the Sessions's User-ID.
-	err = repo.usersColl.FindOne(ctx, bson.M{"_id": session.MongoUserID}, opts).Decode(&user)
-	if err != nil {
-
-		// Check if the User wasn't found.
-		if err == mongo.ErrNoDocuments {
-			return nil, domain.ProblemDetail{Problem: domain.ProblemUserDoesntExist}
-		}
-
-		return nil, errors.Wrap(err, "cannot find user")
-	}
-
-	user.ID = user.MongoID.Hex()
-	return user, nil
 }
 
 // UserExists checks if a User with one of the given key-value pairs exists.

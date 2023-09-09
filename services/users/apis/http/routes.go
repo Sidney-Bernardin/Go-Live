@@ -22,5 +22,6 @@ func (a *api) doRoutes() {
 	auth := a.router.PathPrefix("/auth").Subrouter()
 	auth.Use(a.getBearerToken)
 	auth.HandleFunc("", a.handleAuthenticateUser).Methods("GET")
+	auth.HandleFunc("", a.handleDeleteAccount).Methods("DELETE")
 	auth.HandleFunc("/logout", a.handleLogout).Methods("DELETE")
 }

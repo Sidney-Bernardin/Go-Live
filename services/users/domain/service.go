@@ -22,8 +22,9 @@ type Service interface {
 
 	GetUser(ctx context.Context, userID string, fields ...string) (*User, error)
 	SearchUsers(ctx context.Context, username string, offset, limit int, fields ...string) ([]*User, error)
-
 	GetProfilePicture(ctx context.Context, userID string) (*bytes.Buffer, error)
+
+	DeleteAccount(ctx context.Context, sessionID string) error
 }
 
 type service struct {
@@ -57,7 +58,8 @@ func (svc *service) AuthenticateUser(ctx context.Context, sessionID string, fiel
 	return user, nil
 }
 
-// Signup uses info to create a User and a Session, then inserts them into the database.
+// Signup creates a User and a Session for it, then inserts them along with
+// profilePicture into the database.
 func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture []byte) (string, error) {
 
 	// Check the length of the SignupInfo's username.
@@ -92,7 +94,7 @@ func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture
 	}
 
 	// Create a User with the SignupInfo and insert it into the database.
-	sessionID, err := svc.databaseRepo.SignupUser(ctx, profilePicture, &User{
+	sessionID, err := svc.databaseRepo.CreateAccount(ctx, profilePicture, &User{
 		Username: info.Username,
 		Email:    info.Email,
 		Password: string(hashedPasw),
@@ -188,4 +190,19 @@ func (svc *service) SearchUsers(ctx context.Context, username string, offset, li
 func (svc *service) GetProfilePicture(ctx context.Context, userID string) (*bytes.Buffer, error) {
 	buf, err := svc.databaseRepo.GetProfilePicture(ctx, userID)
 	return buf, errors.Wrap(err, "cannot get profile-picture")
+}
+
+// DeleteAccount deletes the User, profile-picture, and all Sessions associated
+// with userID's User from the database.
+func (svc *service) DeleteAccount(ctx context.Context, sessionID string) error {
+
+	// Authenticate the User.
+	user, err := svc.AuthenticateUser(ctx, sessionID)
+	if err != nil {
+		return errors.Wrap(err, "cannot authenticate user")
+	}
+
+	// Delete the Users account.
+	err = svc.databaseRepo.DeleteAccount(ctx, user.ID)
+	return errors.Wrap(err, "cannot delete account")
 }

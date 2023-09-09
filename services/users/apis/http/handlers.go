@@ -152,6 +152,19 @@ func (a *api) handleAuthenticateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+
+	sessionID := r.Context().Value(mwBearerToken).(string)
+
+	// Delete the account of the Session-ID's User.
+	if err := a.service.DeleteAccount(r.Context(), sessionID); err != nil {
+		a.err(w, errors.Wrap(err, "cannot delete account"))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *api) handleGetProfilePicture(w http.ResponseWriter, r *http.Request) {
 
 	// Get the profile-picture of the User-ID's User.

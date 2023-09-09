@@ -6,7 +6,11 @@ import (
 )
 
 type DatabaseRepository interface {
-	SignupUser(ctx context.Context, profilePicture []byte, user *User) (userID string, err error)
+	CreateAccount(ctx context.Context, profilePicture []byte, user *User) (userID string, err error)
+	DeleteAccount(ctx context.Context, userID string) error
+
+	GetUserBySession(ctx context.Context, sessionID string, fields ...string) (*User, error)
+
 	GetUser(ctx context.Context, userID string, fields ...string) (*User, error)
 	GetUserByUsername(ctx context.Context, username string, fields ...string) (*User, error)
 	SearchUsers(ctx context.Context, username string, offset, limit int64, fields ...string) ([]*User, error)
@@ -14,8 +18,6 @@ type DatabaseRepository interface {
 
 	InsertSession(ctx context.Context, session *Session) (sessionID string, err error)
 	DeleteSession(ctx context.Context, sessionID string) error
-
-	GetUserBySession(ctx context.Context, sessionID string, fields ...string) (*User, error)
 
 	GetProfilePicture(ctx context.Context, userID string) (*bytes.Buffer, error)
 }
