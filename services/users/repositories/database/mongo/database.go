@@ -55,31 +55,31 @@ func NewDatabaseRepository(config *configuration.Config) (domain.DatabaseReposit
 }
 
 // CreateAccount inserts user, a new Session for it, and profilePicture.
-func (repo *databaseRepository) CreateAccount(ctx context.Context, profilePicture []byte, user *domain.User) (string, error) {
+func (repo *databaseRepository) CreateAccount(ctx context.Context, profilePicture []byte, user *domain.User) (*domain.LoginResponse, error) {
 
 	user.MongoID = primitive.NewObjectID()
 	user.MongoProfilePictureID = primitive.NewObjectID()
 
 	if _, err := repo.usersColl.InsertOne(ctx, user); err != nil {
-		return "", errors.Wrap(err, "cannot insert user")
+		return nil, errors.Wrap(err, "cannot insert user")
 	}
 
 	// Create a gridfs Bucket.
 	bucket, err := gridfs.NewBucket(repo.usersDB)
 	if err != nil {
-		return "", errors.Wrap(err, "cannot create gridfs bucket")
+		return nil, errors.Wrap(err, "cannot create gridfs bucket")
 	}
 
 	// Open an upload-stream with the User's profile-picture-ID.
 	uploadStream, err := bucket.OpenUploadStreamWithID(user.MongoProfilePictureID, user.Username)
 	if err != nil {
-		return "", errors.Wrap(err, "cannot create upload stream")
+		return nil, errors.Wrap(err, "cannot create upload stream")
 	}
 	defer uploadStream.Close()
 
 	// Write the profile-picture to the upload-stream
 	if _, err := uploadStream.Write(profilePicture); err != nil {
-		return "", errors.Wrap(err, "cannot write to upload stream")
+		return nil, errors.Wrap(err, "cannot write to upload stream")
 	}
 
 	// Create a Session for the User.
@@ -90,8 +90,14 @@ func (repo *databaseRepository) CreateAccount(ctx context.Context, profilePictur
 	}
 
 	// Insert the Session.
-	_, err = repo.sessionsColl.InsertOne(ctx, session)
-	return session.MongoID.Hex(), errors.Wrap(err, "cannot insert session")
+	if _, err = repo.sessionsColl.InsertOne(ctx, session); err != nil {
+		return nil, errors.Wrap(err, "cannot insert session")
+	}
+
+	return &domain.LoginResponse{
+		SessionID: session.MongoUserID.Hex(),
+		UserID:    user.MongoID.Hex(),
+	}, nil
 }
 
 // DeleteAccount deletes the User, profile-picture, and all Sessions associated

@@ -25,7 +25,7 @@ func (a *api) handleSignup(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// Sign-Up a new User.
-	sessionID, err := a.service.Signup(r.Context(), info, formFiles["profile_picture"])
+	res, err := a.service.Signup(r.Context(), info, formFiles["profile_picture"])
 	if err != nil {
 		a.err(w, errors.Wrap(err, "cannot signup user"))
 		return
@@ -34,7 +34,6 @@ func (a *api) handleSignup(w http.ResponseWriter, r *http.Request) {
 	// Respond.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	res := &domain.LoginResponse{SessionID: sessionID}
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		a.err(w, errors.Wrap(err, "cannot write response"))
 	}
@@ -44,7 +43,8 @@ func (a *api) handleSignin(w http.ResponseWriter, r *http.Request) {
 
 	info := r.Context().Value(mwFormValues).(*domain.SigninInfo)
 
-	sessionID, err := a.service.Signin(r.Context(), info)
+	// Sign-In a new User.
+	res, err := a.service.Signin(r.Context(), info)
 	if err != nil {
 		a.err(w, errors.Wrap(err, "cannot signin user"))
 		return
@@ -53,7 +53,6 @@ func (a *api) handleSignin(w http.ResponseWriter, r *http.Request) {
 	// Respond.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	res := &domain.LoginResponse{SessionID: sessionID}
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		a.err(w, errors.Wrap(err, "cannot write response"))
 	}

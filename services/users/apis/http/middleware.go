@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"users/domain"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -55,17 +54,10 @@ func (a *api) getFormData(formValues any, formFiles ...string) mux.MiddlewareFun
 
 			// Decode the request's baisc form-data.
 			if err := a.formDocoder.Decode(formValues, r.MultipartForm.Value); err != nil {
-
-				// Check if any values are missing.
-				if err, ok := err.(schema.MultiError); ok {
-					a.err(w, domain.ProblemDetail{
-						Problem: domain.ProblemInvalidInput,
-						Detail:  err.Error()})
+				if err, ok := err.(schema.MultiError); !ok {
+					a.err(w, errors.Wrap(err, "cannot decode form data"))
 					return
 				}
-
-				a.err(w, errors.Wrap(err, "cannot decode form data"))
-				return
 			}
 
 			// Decode the request's file form-data.

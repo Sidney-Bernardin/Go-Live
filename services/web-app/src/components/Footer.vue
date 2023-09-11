@@ -1,9 +1,24 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useRouter } from "vue-router";
+import { logout } from "../requests/users";
+import { loader, deleteSessionID } from "../utils";
+
+const router = useRouter();
+const { loading, wrapLoad } = loader();
+
+const onLogout = (): Promise<void> =>
+  wrapLoad(
+    logout().then(() => {
+      deleteSessionID();
+      router.push({ name: "Login" });
+    }),
+  );
+</script>
 
 <template>
   <div class="footer">
     <div class="left">
-      <button>log-out</button>
+      <button @click="onLogout" :disabled="loading">log-out</button>
     </div>
   </div>
 </template>

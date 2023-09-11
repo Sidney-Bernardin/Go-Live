@@ -1,12 +1,18 @@
 <script setup lang="ts">
-const props = defineProps({ username: String });
+import { useRouter } from "vue-router";
+import { getProfilePictureURL } from "../requests/users";
+
+const router = useRouter();
+
+const props = defineProps<{
+  user: object;
+}>();
 </script>
 
 <template>
-  <button class="user-card">
-    <img
-      src="https://b1512865.smushcdn.com/1512865/wp-content/uploads/2020/04/stormlight-simplifed_v02_dk.jpg?lossy=1&strip=1&webp=1" />
-    {{ props.username }}
+  <button class="user-card" @click="router.push({ path: `/${props.user.username}` })">
+    <img :src="getProfilePictureURL(props.user.id)" />
+    {{ props.user.username }}
   </button>
 </template>
 

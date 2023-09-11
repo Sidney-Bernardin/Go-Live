@@ -1,7 +1,49 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+
+import { loader, setSessionID, unexpectedErr } from "../utils";
+import { signup, signin } from "../requests/users";
+
+const router = useRouter();
+const { loading, wrapLoad } = loader();
 
 const showSignup = ref(true);
+const profilePictureURL = ref("");
+const signupProblem = ref("");
+const signinProblem = ref("");
+
+const login = (sessionID: string): void => {
+  setSessionID(sessionID);
+  router.push({ name: "User", params: { username: "_" } });
+};
+
+const onProfilePictureChange = (e: Event): void => {
+  const file: File = (e.target as HTMLInputElement).files![0];
+  profilePictureURL.value = URL.createObjectURL(file);
+};
+
+const onSubmitSignup = (e: Event): Promise<void> =>
+  wrapLoad(
+    signup(new FormData(e.target as HTMLFormElement))
+      .then((res) => login(res.data.session_id))
+      .catch((err) => {
+        if (err.response.data.problem == "invalid_signup_info")
+          signupProblem.value = err.response.data.detail;
+        else unexpectedErr(err);
+      }),
+  );
+
+const onSubmitSignin = (e: Event): Promise<void> =>
+  wrapLoad(
+    signin(new FormData(e.target as HTMLFormElement))
+      .then((res) => login(res.data.session_id))
+      .catch((err) => {
+        if (err.response.data.problem == "invalid_signin_info")
+          signinProblem.value = err.response.data.detail;
+        else unexpectedErr(err);
+      }),
+  );
 </script>
 
 <template>
@@ -14,13 +56,14 @@ const showSignup = ref(true);
       <button :disabled="showSignup" @click="showSignup = true">sign-up</button>
     </div>
 
-    <form v-if="showSignup">
+    <form v-if="showSignup" @submit.prevent="onSubmitSignup">
       <label class="file-label">
-        <input type="file" />
-        <img
-          src="https://b1512865.smushcdn.com/1512865/wp-content/uploads/2020/04/stormlight-simplifed_v02_dk.jpg?lossy=1&strip=1&webp=1"
-          alt=""
+        <input
+          type="file"
+          name="profile_picture"
+          @change="onProfilePictureChange"
         />
+        <img :src="profilePictureURL" />
         Upload Profile Picture
       </label>
 
@@ -28,26 +71,26 @@ const showSignup = ref(true);
       <input type="text" name="username" placeholder="Username" />
 
       <label for="email">Email</label>
-      <input type="email" placeholder="Email" />
+      <input type="email" name="email" placeholder="Email" />
 
       <label for="password">Password</label>
-      <input type="password" placeholder="Password" />
+      <input type="password" name="password" placeholder="Password" />
 
-      <input type="submit" value="sign-up" />
+      <input type="submit" value="sign-up" :disabled="loading" />
 
-      <p>Bad username or whatever...</p>
+      <p v-if="signupProblem">{{ signupProblem }}</p>
     </form>
 
-    <form v-else>
+    <form v-else @submit.prevent="onSubmitSignin">
       <label for="username">Username</label>
       <input type="text" name="username" placeholder="Username" />
 
       <label for="password">Password</label>
-      <input type="password" placeholder="Password" />
+      <input type="password" name="password" placeholder="Password" />
 
-      <input type="submit" value="sign-in" />
+      <input type="submit" value="sign-in" :disabled="loading" />
 
-      <p>Bad username or whatever...</p>
+      <p v-if="signinProblem">{{ signinProblem }}</p>
     </form>
   </div>
 </template>
@@ -82,11 +125,13 @@ const showSignup = ref(true);
 
   form {
     display: flex;
+    width: 450px;
     border: 1px solid $black;
     padding: 30px;
     flex-direction: column;
 
     p {
+      width: 100%;
       color: $yellow;
       font-size: 1.5rem;
       font-weight: bolder;
@@ -129,7 +174,8 @@ const showSignup = ref(true);
         margin-top: 30px;
         text-transform: uppercase;
 
-        &[disabled="true"] {
+        &[disabled] {
+          cursor: auto;
           border: 1px solid $dark-green;
           color: $dark-green;
           text-decoration: none;

@@ -1,17 +1,26 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
+import { useStore } from "vuex";
 import UserCard from "./UserCard.vue";
+
+const router = useRouter();
+const store = useStore();
 </script>
 
 <template>
   <div class="nav-bar">
     <div class="left">
-      <UserCard username="profile" />
-      <span>/</span>
-      <div class="destination">bob-smith</div>
+      <UserCard v-if="store.state.self" :user="{ id: store.state.self.id, username: 'home' }" />
+      <div class="logo" v-else>Go Live</div>
+
+      <div class="destination" v-if="store.state.self">
+        <span>/</span>
+        {{ router.currentRoute.value.params.username }}
+      </div>
     </div>
 
-    <div class="right">
-      <button class="go-live">Go Live</button>
+    <div class="right" v-if="store.state.self">
+      <button class="go-live">go live</button>
     </div>
   </div>
 </template>
@@ -36,15 +45,24 @@ import UserCard from "./UserCard.vue";
     margin-left: 15px;
     align-items: center;
 
-    span {
+    .logo {
+      @include basic-button;
+      color: $dark-green;
       font-size: 2rem;
-      font-weight: bolder;
+      text-decoration: none;
     }
 
     .destination {
-      background: transparent;
+      display: flex;
+      gap: 10px;
       font-size: 1.5rem;
       font-weight: bolder;
+      align-items: center;
+
+      span {
+        font-size: 2rem;
+        font-weight: bolder;
+      }
     }
   }
 

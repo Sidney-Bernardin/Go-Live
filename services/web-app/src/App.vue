@@ -1,8 +1,26 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
+import { useStore } from "vuex";
+
 import NavBar from "./components/NavBar.vue";
 import Footer from "./components/Footer.vue";
 import Chat from "./components/Chat.vue";
 import Explore from "./components/Explore.vue";
+
+import { authenticateUser } from "./requests/users";
+import { unexpectedErr, deleteSessionID } from "./utils";
+
+const router = useRouter();
+const store = useStore();
+
+router.beforeEach(async () => {
+  const res = await authenticateUser(["username"]).catch((err) => {
+    if (err.response.data.problem == "unauthorized") deleteSessionID();
+    else unexpectedErr(err);
+  });
+
+  store.dispatch("setSelf", res?.data);
+});
 </script>
 
 <template>
@@ -10,7 +28,7 @@ import Explore from "./components/Explore.vue";
     <div class="view">
       <NavBar />
       <router-view></router-view>
-      <Footer />
+      <Footer v-if="store.state.self" />
     </div>
 
     <div class="right">

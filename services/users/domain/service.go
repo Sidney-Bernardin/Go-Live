@@ -16,8 +16,8 @@ import (
 type Service interface {
 	AuthenticateUser(ctx context.Context, sessionID string, fields ...string) (*User, error)
 
-	Signup(ctx context.Context, info *SignupInfo, profilePicture []byte) (sessionID string, err error)
-	Signin(ctx context.Context, info *SigninInfo) (sessionID string, err error)
+	Signup(ctx context.Context, info *SignupInfo, profilePicture []byte) (*LoginResponse, error)
+	Signin(ctx context.Context, info *SigninInfo) (*LoginResponse, error)
 	Logout(ctx context.Context, sessionID string) error
 
 	GetUser(ctx context.Context, userID string, fields ...string) (*User, error)
@@ -60,11 +60,18 @@ func (svc *service) AuthenticateUser(ctx context.Context, sessionID string, fiel
 
 // Signup creates a User and a Session for it, then inserts them along with
 // profilePicture into the database.
-func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture []byte) (string, error) {
+func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture []byte) (*LoginResponse, error) {
+
+	if profilePicture == nil {
+		return nil, ProblemDetail{
+			Problem: ProblemInvalidSignupInfo,
+			Detail:  "Profile picture is required.",
+		}
+	}
 
 	// Check the length of the SignupInfo's username.
 	if len(info.Username) < 3 || len(info.Username) > 20 {
-		return "", ProblemDetail{
+		return nil, ProblemDetail{
 			Problem: ProblemInvalidSignupInfo,
 			Detail:  "Username must be between 3 and 20 characters long.",
 		}
@@ -77,11 +84,11 @@ func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture
 	)
 
 	if err != nil {
-		return "", errors.Wrap(err, "cannot check if user exists")
+		return nil, errors.Wrap(err, "cannot check if user exists")
 	}
 
 	if userExists {
-		return "", ProblemDetail{
+		return nil, ProblemDetail{
 			Problem: ProblemInvalidSignupInfo,
 			Detail:  fmt.Sprintf("The %s has been taken by another user.", takenField),
 		}
@@ -90,22 +97,22 @@ func (svc *service) Signup(ctx context.Context, info *SignupInfo, profilePicture
 	// Hash the SignupInfo's password.
 	hashedPasw, err := bcrypt.GenerateFromPassword([]byte(info.Password), 14)
 	if err != nil {
-		return "", errors.Wrap(err, "cannot hash password")
+		return nil, errors.Wrap(err, "cannot hash password")
 	}
 
 	// Create a User with the SignupInfo and insert it into the database.
-	sessionID, err := svc.databaseRepo.CreateAccount(ctx, profilePicture, &User{
+	res, err := svc.databaseRepo.CreateAccount(ctx, profilePicture, &User{
 		Username: info.Username,
 		Email:    info.Email,
 		Password: string(hashedPasw),
 	})
 
-	return sessionID, errors.Wrap(err, "cannot signup session")
+	return res, errors.Wrap(err, "cannot signup session")
 }
 
 // Signin creates a Session for the User with info's username, and inserts it
 // into the database.
-func (svc *service) Signin(ctx context.Context, info *SigninInfo) (string, error) {
+func (svc *service) Signin(ctx context.Context, info *SigninInfo) (*LoginResponse, error) {
 
 	// Get the User with the SigninInfo's username.
 	user, err := svc.databaseRepo.GetUserByUsername(ctx, info.Username, "password")
@@ -113,25 +120,25 @@ func (svc *service) Signin(ctx context.Context, info *SigninInfo) (string, error
 
 		// If the error was caused by a ProblemDetail, replace it.
 		if _, ok := err.(ProblemDetail); ok {
-			return "", ProblemDetail{
+			return nil, ProblemDetail{
 				Problem: ProblemInvalidSigninInfo,
 				Detail:  "Incorrect username or password.",
 			}
 		}
 
-		return "", errors.Wrap(err, "cannot get user")
+		return nil, errors.Wrap(err, "cannot get user")
 	}
 
 	// Check if the SigninInfo's password matches the User's password.
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(info.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(info.Password)); err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
-			return "", ProblemDetail{
+			return nil, ProblemDetail{
 				Problem: ProblemInvalidSigninInfo,
 				Detail:  "Incorrect username or password.",
 			}
 		}
 
-		return "", errors.Wrap(err, "cannot compare passwords")
+		return nil, errors.Wrap(err, "cannot compare passwords")
 	}
 
 	// Create a Session for the User and insert it into the database.
@@ -140,7 +147,14 @@ func (svc *service) Signin(ctx context.Context, info *SigninInfo) (string, error
 		ExpireAt: time.Now().Add(svc.config.SessionLength),
 	})
 
-	return sessionID, errors.Wrap(err, "cannot insert session")
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot insert session")
+	}
+
+	return &LoginResponse{
+		SessionID: sessionID,
+		UserID:    user.ID,
+	}, nil
 }
 
 // Delete deletes sessionID's Session from the database.

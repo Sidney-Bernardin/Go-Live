@@ -8,15 +8,15 @@ export default createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: "/login",
       name: "Login",
+      path: "/login",
       component: Login,
       beforeEnter: (_to, _from, next) =>
-        next(getSessionID() ? { name: "User" } : null),
+        next(getSessionID() ? { name: "User", params: { username: "_" } } : null),
     },
     {
-      path: "/:username",
       name: "User",
+      path: "/:username",
       component: User,
       beforeEnter: (_to, _from, next) =>
         next(getSessionID() ? null : { name: "Login" }),

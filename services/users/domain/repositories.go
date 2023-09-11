@@ -6,7 +6,7 @@ import (
 )
 
 type DatabaseRepository interface {
-	CreateAccount(ctx context.Context, profilePicture []byte, user *User) (userID string, err error)
+	CreateAccount(ctx context.Context, profilePicture []byte, user *User) (*LoginResponse, error)
 	DeleteAccount(ctx context.Context, userID string) error
 
 	GetUserBySession(ctx context.Context, sessionID string, fields ...string) (*User, error)

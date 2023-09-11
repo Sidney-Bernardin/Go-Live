@@ -1,20 +1,16 @@
 import { ref } from "vue";
 
-export const setSessionID = (sid: string) => sessionStorage.setItem("sid", sid);
-export const getSessionID = () => sessionStorage.getItem("sid");
-export const deleteSessionID = () => sessionStorage.removeItem("sid");
+export const setSessionID = (sid: string): void =>
+  sessionStorage.setItem("sid", sid);
+export const getSessionID = (): string | null => sessionStorage.getItem("sid");
+export const deleteSessionID = (): void => sessionStorage.removeItem("sid");
 
-export const unexpectedErr = (err: any) => {
+export const unexpectedErr = (err: any): void => {
   console.error(`An unexpected problem has occurred.`, err);
   alert(`An unexpected problem has occurred.`);
 };
 
-export const problems = {
-  unauthorized: "unauthorized",
-  invalidSignupInfo: "invalid_signup_info",
-};
-
-export function loader() {
+export const loader = () => {
   const loading = ref(false);
 
   const wrapLoad = async (fn: Promise<void>) => {
@@ -26,4 +22,4 @@ export function loader() {
     loading,
     wrapLoad,
   };
-}
+};
