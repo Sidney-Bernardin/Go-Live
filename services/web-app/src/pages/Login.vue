@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useStore } from "vuex";
 
 import { loader, setSessionID, unexpectedErr } from "../utils";
-import { signup, signin } from "../requests/users";
+import { LoginRes } from "../requests/models";
+import { signup, signin, getUser } from "../requests/users";
 
+const store = useStore();
 const router = useRouter();
 const { loading, wrapLoad } = loader();
 
@@ -13,20 +16,24 @@ const profilePictureURL = ref("");
 const signupProblem = ref("");
 const signinProblem = ref("");
 
-const login = (sessionID: string): void => {
-  setSessionID(sessionID);
-  router.push({ name: "User", params: { username: "_" } });
-};
-
 const onProfilePictureChange = (e: Event): void => {
   const file: File = (e.target as HTMLInputElement).files![0];
   profilePictureURL.value = URL.createObjectURL(file);
 };
 
+const finishLogin = ({ session_id, user_id }: LoginRes): Promise<void> =>
+  getUser(user_id, ["username"])
+    .then((res) => {
+      store.dispatch("setSelf", res)
+      setSessionID(session_id);
+      router.push({ name: "User", params: { username: res.username } });
+    })
+    .catch((err) => unexpectedErr(err))
+
 const onSubmitSignup = (e: Event): Promise<void> =>
   wrapLoad(
     signup(new FormData(e.target as HTMLFormElement))
-      .then((res) => login(res.data.session_id))
+      .then((res) => finishLogin(res))
       .catch((err) => {
         if (err.response.data.problem == "invalid_signup_info")
           signupProblem.value = err.response.data.detail;
@@ -37,7 +44,7 @@ const onSubmitSignup = (e: Event): Promise<void> =>
 const onSubmitSignin = (e: Event): Promise<void> =>
   wrapLoad(
     signin(new FormData(e.target as HTMLFormElement))
-      .then((res) => login(res.data.session_id))
+      .then((res) => finishLogin(res))
       .catch((err) => {
         if (err.response.data.problem == "invalid_signin_info")
           signinProblem.value = err.response.data.detail;
@@ -58,11 +65,7 @@ const onSubmitSignin = (e: Event): Promise<void> =>
 
     <form v-if="showSignup" @submit.prevent="onSubmitSignup">
       <label class="file-label">
-        <input
-          type="file"
-          name="profile_picture"
-          @change="onProfilePictureChange"
-        />
+        <input type="file" name="profile_picture" @change="onProfilePictureChange" />
         <img :src="profilePictureURL" />
         Upload Profile Picture
       </label>

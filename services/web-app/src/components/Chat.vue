@@ -1,7 +1,14 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { computed } from "vue";
+import { useStore } from "vuex";
+
+const store = useStore();
+
+const state = computed(() => (store.state.room ? "primary" : "disabled"));
+</script>
 
 <template>
-  <div class="chat">
+  <div :class="`chat ${state}`">
     <p>
       Lorem ipsum, dolor sit amet consectetur adipisicing elit. Amet, aliquid
       accusamus iste veniam optio laborum ipsam, ab harum dicta, quis labore
@@ -54,7 +61,7 @@
     input {
       width: 100%;
       height: 2rem;
-      border: 1px solid $white;
+      border: 2px solid $white;
       color: $white;
       font-size: 2rem;
       font-weight: bolder;
@@ -69,7 +76,7 @@
   }
 
   p {
-    border: 1px solid $white;
+    border: 2px solid $white;
     margin: 30px 30px 0 30px;
     padding: 15px;
     font-size: 5rem;

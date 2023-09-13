@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
+import { User } from "../requests/models";
 import { getProfilePictureURL } from "../requests/users";
 
 const router = useRouter();
 
-const props = defineProps<{
-  user: object;
-}>();
+const props = defineProps<{ user: User }>();
 </script>
 
 <template>

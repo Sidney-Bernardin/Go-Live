@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { logout } from "../requests/users";
-import { loader, deleteSessionID } from "../utils";
+import { loader, deleteSessionID, unexpectedErr } from "../utils";
 
 const router = useRouter();
 const { loading, wrapLoad } = loader();
 
-const onLogout = (): Promise<void> =>
-  wrapLoad(
-    logout().then(() => {
-      deleteSessionID();
-      router.push({ name: "Login" });
-    }),
-  );
+const onLogout = async (): Promise<void> => {
+  await wrapLoad(logout().catch((err) => unexpectedErr(err)));
+  deleteSessionID();
+  router.push({ name: "Login" });
+}
 </script>
 
 <template>

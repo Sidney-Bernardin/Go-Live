@@ -1,7 +1,14 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { computed } from "vue";
+import { useStore } from "vuex";
+
+const store = useStore();
+
+const state = computed(() => (store.state.room ? "secondary" : "primary"));
+</script>
 
 <template>
-  <div class="explore">
+  <div :class="`explore ${state}`">
     <div class="cover">
       <h1>Go Explore</h1>
       <input type="text" placeholder="Search for users!" />
@@ -54,7 +61,7 @@
     input {
       width: 100%;
       height: 2rem;
-      border: 1px solid $black;
+      border: 2px solid $black;
       color: $black;
       font-size: 2rem;
       font-weight: bolder;
@@ -69,7 +76,7 @@
   }
 
   p {
-    border: 1px solid $black;
+    border: 2px solid $black;
     margin: 0 30px 30px 30px;
     padding: 15px;
     font-size: 5rem;

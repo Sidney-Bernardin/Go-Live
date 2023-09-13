@@ -2,15 +2,21 @@
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 import UserCard from "./UserCard.vue";
+import { getRtmpUrl } from "../requests/video-stream";
 
 const router = useRouter();
 const store = useStore();
+
+const onGoLive = (): void => {
+  const url = getRtmpUrl(store.state.self.id)
+  navigator.clipboard.writeText(url);
+}
 </script>
 
 <template>
   <div class="nav-bar">
     <div class="left">
-      <UserCard v-if="store.state.self" :user="{ id: store.state.self.id, username: 'home' }" />
+      <UserCard v-if="store.state.self" :user="store.state.self" />
       <div class="logo" v-else>Go Live</div>
 
       <div class="destination" v-if="store.state.self">
@@ -20,7 +26,7 @@ const store = useStore();
     </div>
 
     <div class="right" v-if="store.state.self">
-      <button class="go-live">go live</button>
+      <button class="go-live" @click="onGoLive">go live</button>
     </div>
   </div>
 </template>

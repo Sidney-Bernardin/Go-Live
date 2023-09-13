@@ -14,12 +14,13 @@ const router = useRouter();
 const store = useStore();
 
 router.beforeEach(async () => {
-  const res = await authenticateUser(["username"]).catch((err) => {
-    if (err.response.data.problem == "unauthorized") deleteSessionID();
-    else unexpectedErr(err);
-  });
+  const res = await authenticateUser(["username"])
+    .catch((err) => {
+      if (err.response.data.problem == "unauthorized") deleteSessionID();
+      else unexpectedErr(err);
+    });
 
-  store.dispatch("setSelf", res?.data);
+  store.dispatch("setSelf", res);
 });
 </script>
 
@@ -33,7 +34,7 @@ router.beforeEach(async () => {
 
     <div class="right">
       <Chat />
-      <Explore class="secondary" />
+      <Explore />
     </div>
   </div>
 </template>
@@ -50,6 +51,7 @@ router.beforeEach(async () => {
     position: relative;
     background: $green;
     flex: 1;
+    overflow: hidden;
 
     .nav-bar {
       width: 100%;
@@ -64,8 +66,11 @@ router.beforeEach(async () => {
 
     .chat,
     .explore {
-      flex: 3;
       transition: 0.2s;
+
+      &.primary {
+        flex: 3;
+      }
 
       &.secondary {
         flex: 1;
