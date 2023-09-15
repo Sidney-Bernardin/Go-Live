@@ -14,11 +14,10 @@ const router = useRouter();
 const store = useStore();
 
 router.beforeEach(async () => {
-  const res = await authenticateUser(["username"])
-    .catch((err) => {
-      if (err.response.data.problem == "unauthorized") deleteSessionID();
-      else unexpectedErr(err);
-    });
+  const res = await authenticateUser(["username"]).catch((err) => {
+    if (err.response.data.problem == "unauthorized") deleteSessionID();
+    else unexpectedErr(err);
+  });
 
   store.dispatch("setSelf", res);
 });
