@@ -1,24 +1,36 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { useStore } from "vuex";
+
+import UserCard from "./UserCard.vue";
+
+import { User } from "../requests/models";
+import { searchUsers } from "../requests/users";
+import { unexpectedErr } from "../utils";
 
 const store = useStore();
 
 const state = computed(() => (store.state.room ? "secondary" : "primary"));
+const users = ref<User[]>([]);
+
+const onExplore = (e: Event) =>
+  searchUsers((e.target as HTMLInputElement).value, ["username"])
+    .then((res) => (users.value = res))
+    .catch((err) => unexpectedErr(err));
 </script>
 
 <template>
   <div :class="`explore ${state}`">
     <div class="cover">
       <h1>Go Explore</h1>
-      <input type="text" placeholder="Search for users!" />
+      <input type="text" placeholder="Search for users!" @input="onExplore" />
     </div>
 
-    <p>
-      Lorem ipsum, dolor sit amet consectetur adipisicing elit. Amet, aliquid
-      accusamus iste veniam optio laborum ipsam, ab harum dicta, quis labore
-      impedit dolores reiciendis at ducimus a ad quo. Modi?
-    </p>
+    <ul>
+      <li v-for="user in users">
+        <UserCard :user="user" />
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -40,6 +52,7 @@ const state = computed(() => (store.state.room ? "secondary" : "primary"));
   }
 
   .cover {
+    z-index: 1;
     position: sticky;
     display: flex;
     top: 0;
@@ -67,20 +80,41 @@ const state = computed(() => (store.state.room ? "secondary" : "primary"));
       font-weight: bolder;
       background: transparent;
       padding: 15px;
-      flex: 2;
-
+  
       &::placeholder {
         color: $dark-white;
       }
     }
   }
 
-  p {
+  ul {
+    position: relative;
+    display: flex;
+    gap: 15px;
     border: 2px solid $black;
     margin: 0 30px 30px 30px;
     padding: 15px;
-    font-size: 5rem;
     flex: 5;
+    flex-direction: column;
+    list-style-type: none;
+
+    li {
+      display: flex;
+      gap: 15px;
+      font-size: 1.75rem;
+      align-items: normal;
+
+      .user-card {
+        color: $black;
+        font-size: 1.75rem;
+        align-self: start;
+      }
+
+      p {
+        margin: 0;
+        word-break: break-all;
+      }
+    }
   }
 }
 </style>

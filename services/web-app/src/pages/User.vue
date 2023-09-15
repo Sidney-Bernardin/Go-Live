@@ -3,7 +3,7 @@ import { ref, watch } from "vue";
 import { useRouter, RouteLocationNormalizedLoaded } from "vue-router";
 import { useStore } from "vuex";
 
-import VideoStream from "../components/VideoStream.vue"
+import VideoStream from "../components/VideoStream.vue";
 
 import { User } from "../requests/models";
 import { searchUsers } from "../requests/users";
@@ -13,30 +13,29 @@ import { unexpectedErr } from "../utils";
 const router = useRouter();
 const store = useStore();
 
-const user = ref<User | null>(null)
+const user = ref<User | null>(null);
 
 const onRouteChange = async (newRoute: RouteLocationNormalizedLoaded): Promise<void> => {
-
   if (newRoute.params.username == "_") {
-    router.push({ path: `/${store.state.self.username}` })
-    return
+    router.push({ path: `/${store.state.self.username}` });
+    return;
   }
 
-  user.value = null
-  store.dispatch("setRoom", null)
+  user.value = null;
+  store.dispatch("setRoom", null);
 
   try {
-    const users = await searchUsers(newRoute.params.username as string, ["username"])
-    if (users.length == 0) return
-    else user.value = users[0]
+    const users = await searchUsers(newRoute.params.username as string, ["username"]);
+    if (users.length == 0) return;
+    else user.value = users[0];
 
-    const room = await getRoom(user.value!.id)
-    store.dispatch("setRoom", room)
+    const room = await getRoom(user.value!.id);
+    store.dispatch("setRoom", room);
   } catch (err: any) {
-    if (err.response?.data.problem == "room_doesnt_exist") return
-    unexpectedErr(err)
+    if (err.response?.data.problem == "room_doesnt_exist") return;
+    unexpectedErr(err);
   }
-}
+};
 
 watch(router.currentRoute, onRouteChange, { immediate: true });
 </script>

@@ -126,7 +126,7 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		if err := conn.ReadJSON(&roomEvent); err != nil {
 
 			// Check if the error isn't a close error.
-			if websocket.IsUnexpectedCloseError(err) || err == net.ErrClosed {
+			if _, ok := err.(*websocket.CloseError); ok || err == net.ErrClosed {
 				a.wsErr(conn, errors.Wrap(err, "cannot receive websocket message"))
 			}
 

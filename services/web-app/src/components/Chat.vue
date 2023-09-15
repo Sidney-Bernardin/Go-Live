@@ -1,28 +1,65 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useStore } from "vuex";
+
+import UserCard from "./UserCard.vue";
+
+import { wsMessage, RoomEvent } from "../requests/models";
+import { joinRoom } from "../requests/rooms";
+import { unexpectedErr } from "../utils";
 
 const store = useStore();
 
 const state = computed(() => (store.state.room ? "primary" : "disabled"));
+const room = computed(() => store.state.room);
+const chatMessages = ref<RoomEvent[]>([]);
+
+const onChat = (e: Event): void =>
+  ws.value?.send(
+    JSON.stringify({
+      type: "CHAT",
+      user_id: store.state.self.id,
+      username: store.state.self.username,
+      message: Object.fromEntries(new FormData(e.target as HTMLFormElement)).message,
+    } as RoomEvent),
+  );
+
+var ws = ref<WebSocket | null>(null);
+
+watch(room, (newRoom) => {
+  if (!newRoom) return;
+
+  ws.value = joinRoom(store.state.room.id);
+  ws.value.onerror = (err) => unexpectedErr(err);
+  ws.value.onclose = () => store.dispatch("setRoom", null)
+  ws.value.onmessage = (msg) => {
+    const wsMsg = JSON.parse(msg.data) as wsMessage<RoomEvent>;
+    if (wsMsg.content.type == "CHAT") chatMessages.value.push(wsMsg.content);
+  };
+});
 </script>
 
 <template>
   <div :class="`chat ${state}`">
-    <p>
-      Lorem ipsum, dolor sit amet consectetur adipisicing elit. Amet, aliquid
-      accusamus iste veniam optio laborum ipsam, ab harum dicta, quis labore
-      impedit dolores reiciendis at ducimus a ad quo. Modi?
-    </p>
+    <ul>
+      <li v-for="msg in chatMessages">
+        <UserCard :user="{id: msg.user_id, username: msg.username}" />        
+        <p>{{ msg.message }}</p>
+      </li>
+    </ul>
 
     <div class="cover">
       <h1>Go Chat</h1>
-      <input type="text" placeholder="Send a message!" />
+
+      <form @submit.prevent="onChat">
+        <input type="text" name="message" placeholder="Send a message!" />
+        <input type="submit" />
+      </form>
     </div>
   </div>
 </template>
 
-<style lang="scss">
+<style scoped lang="scss">
 @import "../style.scss";
 
 .chat {
@@ -34,7 +71,7 @@ const state = computed(() => (store.state.room ? "primary" : "disabled"));
   &.disabled {
     pointer-events: none;
 
-    input {
+    form {
       display: none;
     }
   }
@@ -55,32 +92,60 @@ const state = computed(() => (store.state.room ? "primary" : "disabled"));
       color: $dark-black;
       font-size: 3.5rem;
       text-wrap: nowrap;
-      flex: 1;
     }
 
-    input {
+    form {
       width: 100%;
-      height: 2rem;
-      border: 2px solid $white;
-      color: $white;
-      font-size: 2rem;
-      font-weight: bolder;
-      background: transparent;
-      padding: 15px;
-      flex: 2;
 
-      &::placeholder {
-        color: $dark-black;
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        height: 2rem;
+        border: 2px solid $white;
+        color: $white;
+        font-size: 2rem;
+        font-weight: bolder;
+        background: transparent;
+        padding: 30px 15px;
+
+        &::placeholder {
+          color: $dark-black;
+        }
+
+        &[type="submit"] {
+          display: none;
+        }
       }
     }
   }
 
-  p {
+  ul {
+    position: relative;
+    display: flex;
+    gap: 15px;
     border: 2px solid $white;
     margin: 30px 30px 0 30px;
     padding: 15px;
-    font-size: 5rem;
     flex: 5;
+    flex-direction: column;
+    list-style-type: none;
+
+    li {
+      display: flex;
+      gap: 15px;
+      font-size: 1.75rem;
+      align-items: normal;
+
+      .user-card {
+        font-size: 1.75rem;
+        align-self: start;  
+      }
+
+      p {
+        margin: 0;
+        word-break: break-all;
+      }
+    }
   }
 }
 </style>
