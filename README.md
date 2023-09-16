@@ -33,7 +33,9 @@ docker compose up --build
 
 ### Using the web-app
 When you first open the web-app, you'll be greeted with a login page.
-<img src="./examples/signin.png" width="50%" />
+<div>
+  <img src="./examples/signin.png" width="50%" />
+</div>
 
 After creating an account you can start streaming. Click the GO_LIVE button to put your RTMP URL into your clipboard.
 <div>
@@ -44,4 +46,6 @@ To create your room all you have to do is start streaming with [OBS](https://obs
 ``` bash
 ffmpeg -re -i "rick.mp4" -c:v copy -c:a aac -ar 44100 -ac 1 -f flv your_rtmp_url
 ```
-<img src="./examples/room.png" width="50%" />
+<div>
+  <img src="./examples/room.png" width="50%" />
+</div>
