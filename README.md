@@ -5,48 +5,41 @@
 1. [Usage](#usage)
 
 ## Overview
-Go Live is an [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based live-streaming service. After creating an account, users can stream video from [OBS](https://obsproject.com/) (or another preferred streaming software) to Go Live's HLS server. The server will broadcast the stream to anyone who joins its room through the Go Live web-app. Other cool features include:
+Go Live is an [RTMP](https://en.wikipedia.org/wiki/Real-Time_Messaging_Protocol)/[HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based live-streaming application. After creating an account, users can stream live video from [OBS](https://obsproject.com/) (or another preferred streaming software) to Go Live's [RTMP](https://en.wikipedia.org/wiki/Real-Time_Messaging_Protocol)/[HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) server. The server will broadcast the stream to anyone who joins its room through the Go Live web-app. Other cool features include:
 
 * Text chat for every room.
-* Users being able to set thier own profile pictures.
+* Users with profile pictures.
 * Rewindable streams up to 5 minutes behind.
-* Text searching users.
+* Regex based user search.
 
+<!---
 For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io/project/?id=go_live).
+-->
 
 ## Usage
 
-### Running Locally
-Running Go Live locally on your machine is as simple as cloning this repository.
+### Install and run Go-Live's various services.
 
+Clone this repository.
 ``` bash
 git clone https://github.com/Sidney-Bernardin/Go-Live.git
 cd Go-Live
 ```
 
-Then using docker to spin-up Go Live's various services.
-
+Run services with Docker Compose
 ``` bash
 docker compose up --build
 ```
 
-### Using the Web-App
+### Using the web app
 When you first open the web-app, you'll be greeted with a login page.
-<div align=center>
-  <img src="./examples/pic1.png" width="75%" />
-</div>
+<img src="./examples/signin.png" width="50%" />
 
-After creating an account, you can live stream by clicking your profile button, then the Go Live button.
-<div align=center>
-  <img src="./examples/pic2.png" />
-</div>
+After creating an account you can start streaming. Click the GO_LIVE button to put your RTMP URL into your clipboard.
+<img src="./examples/home.png" width="50%" />
 
-A popup will appear and after naming your room, you'll be given a URI and key to use in OBS (or your prefered streaming software).
-<div align=center>
-  <img src="./examples/pic3.png" width="75%" />
-</div>
-
-Finally, you and other users can visit your profile to join the stream.
-<div align=center>
-  <img src="./examples/pic4.png" width="75%" />
-</div>
+To create your room all you have to do is start streaming with [OBS](https://obsproject.com/). Or you can use FFMPEG to stream a video file with the following command.
+``` bash
+ffmpeg -re -i "rick.mp4" -c:v copy -c:a aac -ar 44100 -ac 1 -f flv your_rtmp_url
+```
+<img src="./examples/room.png" width="50%" />
