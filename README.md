@@ -36,7 +36,9 @@ When you first open the web-app, you'll be greeted with a login page.
 <img src="./examples/signin.png" width="50%" />
 
 After creating an account you can start streaming. Click the GO_LIVE button to put your RTMP URL into your clipboard.
-<img src="./examples/home.png" width="50%" />
+<div>
+  <img src="./examples/home.png" width="50%" />
+</div>
 
 To create your room all you have to do is start streaming with [OBS](https://obsproject.com/). Or you can use FFMPEG to stream a video file with the following command.
 ``` bash
