@@ -31,7 +31,7 @@ Run services with Docker Compose
 docker compose up --build
 ```
 
-### Using the web app
+### Using the web-app
 When you first open the web-app, you'll be greeted with a login page.
 <img src="./examples/signin.png" width="50%" />
 
