@@ -24,7 +24,7 @@ git clone https://github.com/Sidney-Bernardin/Go-Live.git
 cd Go-Live
 ```
 
-Run services with Docker Compose
+Run services with Docker Compose.
 ``` bash
 docker compose up --build
 ```
