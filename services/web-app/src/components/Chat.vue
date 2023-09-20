@@ -20,7 +20,8 @@ const onChat = (e: Event): void =>
       type: "CHAT",
       user_id: store.state.self.id,
       username: store.state.self.username,
-      message: Object.fromEntries(new FormData(e.target as HTMLFormElement)).message,
+      message: Object.fromEntries(new FormData(e.target as HTMLFormElement))
+        .message,
     } as RoomEvent),
   );
 
@@ -31,7 +32,7 @@ watch(room, (newRoom) => {
 
   ws.value = joinRoom(store.state.room.id);
   ws.value.onerror = (err) => unexpectedErr(err);
-  ws.value.onclose = () => store.dispatch("setRoom", null)
+  ws.value.onclose = () => store.dispatch("setRoom", null);
   ws.value.onmessage = (msg) => {
     const wsMsg = JSON.parse(msg.data) as wsMessage<RoomEvent>;
     if (wsMsg.content.type == "CHAT") chatMessages.value.push(wsMsg.content);
@@ -42,8 +43,8 @@ watch(room, (newRoom) => {
 <template>
   <div :class="`chat ${state}`">
     <ul>
-      <li v-for="msg in chatMessages">
-        <UserCard :user="{id: msg.user_id, username: msg.username}" />        
+      <li v-for="(msg, idx) in chatMessages" :key="idx">
+        <UserCard :user="{ id: msg.user_id, username: msg.username, email: '' }" />
         <p>{{ msg.message }}</p>
       </li>
     </ul>
@@ -138,7 +139,7 @@ watch(room, (newRoom) => {
 
       .user-card {
         font-size: 1.75rem;
-        align-self: start;  
+        align-self: start;
       }
 
       p {
