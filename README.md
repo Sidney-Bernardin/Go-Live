@@ -18,13 +18,19 @@ For more on how this project works, visit my [portfolio](https://sidney-bernardi
 
 ### Install and run Go-Live's various services.
 
-Clone this repository.
+1) Clone this repository.
 ``` bash
 git clone https://github.com/Sidney-Bernardin/Go-Live.git
 cd Go-Live
 ```
 
-Run services with Docker Compose.
+2) Set the following environment variables. In dev mode, NPM is required because a volume will be used for Vite's HMR feature.
+``` bash
+export REGISTRY=<whatever_you_want>
+export BUILD_MODE=<dev or prod>
+```
+
+3) Run services with Docker Compose.
 ``` bash
 docker compose up --build
 ```
