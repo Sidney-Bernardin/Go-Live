@@ -11,7 +11,7 @@ const videoElem = ref<HTMLMediaElement | null>(null)
 onMounted(() => {
   if (!Hls.isSupported()) return
 
-  const hls = new Hls({ debug: false })
+  const hls = new Hls({ debug: true })
   hls.loadSource(getHlsUrl(store.state.room.id))
   hls.attachMedia(videoElem.value!)
   hls.on(Hls.Events.MANIFEST_PARSED, () => videoElem.value?.play())

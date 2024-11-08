@@ -1,4 +1,4 @@
-FROM nginx:latest AS builder
+FROM nginx:1.27.2 AS builder
 
 # Download and install basic dependensies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -29,7 +29,7 @@ RUN cd /usr/src/nginx-${NGINX_VERSION} && \
 
 # ============================================================================
 
-FROM nginx:latest
+FROM nginx:1.27.2
 
 # Use the builder's Nginx modules.
 COPY --from=builder /usr/local/nginx/modules/* /etc/nginx/modules/

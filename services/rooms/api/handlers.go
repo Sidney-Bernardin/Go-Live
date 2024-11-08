@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -93,7 +94,7 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 			case <-r.Context().Done():
 
 				// Have the Session-ID's User leave the Room-ID's Room.
-				if err := a.service.LeaveRoom(r.Context(), userID, roomID); err != nil {
+				if err := a.service.LeaveRoom(context.Background(), userID, roomID); err != nil {
 					a.svrErr(errors.Wrap(err, "cannot leave room"))
 				}
 
@@ -126,7 +127,7 @@ func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		if err := conn.ReadJSON(&roomEvent); err != nil {
 
 			// Check if the error isn't a close error.
-			if _, ok := err.(*websocket.CloseError); ok || err == net.ErrClosed {
+			if _, ok := err.(*websocket.CloseError); !ok && err != net.ErrClosed {
 				a.wsErr(conn, errors.Wrap(err, "cannot receive websocket message"))
 			}
 

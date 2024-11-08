@@ -95,7 +95,7 @@ func (repo *databaseRepository) CreateAccount(ctx context.Context, profilePictur
 	}
 
 	return &domain.LoginResponse{
-		SessionID: session.MongoUserID.Hex(),
+		SessionID: session.MongoID.Hex(),
 		UserID:    user.MongoID.Hex(),
 	}, nil
 }

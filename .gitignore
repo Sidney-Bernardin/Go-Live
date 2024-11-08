@@ -1,2 +1,3 @@
+.env
 services/rtmp/data/*
 services/web-app/node_modules

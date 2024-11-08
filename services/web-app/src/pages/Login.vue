@@ -23,9 +23,9 @@ const onProfilePictureChange = (e: Event): void => {
 
 const finishLogin = ({ session_id, user_id }: LoginRes): Promise<void> =>
   getUser(user_id, ["username"])
-    .then((res) => {
+    .then(async (res) => {
       store.dispatch("setSelf", res)
-      setSessionID(session_id);
+      await setSessionID(session_id);
       router.push({ name: "User", params: { username: res.username } });
     })
     .catch((err) => unexpectedErr(err))
