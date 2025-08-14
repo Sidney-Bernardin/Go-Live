@@ -12,7 +12,7 @@ Go Live is an [RTMP](https://en.wikipedia.org/wiki/Real-Time_Messaging_Protocol)
 * Rewindable streams up to 5 minutes behind.
 * Regex based user search.
 
-For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io/project/?id=go_live).
+For more on how this project works, visit my [portfolio](https://sidney-bernardin.github.io).
 
 ## Usage
 
