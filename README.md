@@ -1,10 +1,15 @@
 # Go-Live
 
+
 **Contents**
 1. [Overview](#overview)
 1. [Usage](#usage)
 
 ## Overview
+<div>
+  <img src="./examples/golive.png" width="100%" />
+</div>
+
 Go Live is an [RTMP](https://en.wikipedia.org/wiki/Real-Time_Messaging_Protocol)/[HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) based live-streaming application. After creating an account, users can stream live video from [OBS](https://obsproject.com/) (or another preferred streaming software) to Go Live's [RTMP](https://en.wikipedia.org/wiki/Real-Time_Messaging_Protocol)/[HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) server. The server will broadcast the stream to anyone who joins its room through the Go Live web-app. Other cool features include:
 
 * Text chat for every room.
