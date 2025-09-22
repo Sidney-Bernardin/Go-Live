@@ -6,7 +6,6 @@ services:
     build:
       context: ./services/web-app
       dockerfile: Dockerfile
-      target: ${BUILD_MODE}
       args:
         rtmp_url: "localhost:3010"
         hls_url: "localhost:3011"

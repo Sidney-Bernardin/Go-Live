@@ -6,6 +6,10 @@ $green: #389e70;
 $dark-green: #2e825b;
 $yellow: #c7c964;
 
+::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   color: $black;
   font-family: sans-serif;

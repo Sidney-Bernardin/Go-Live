@@ -29,10 +29,9 @@ git clone https://github.com/Sidney-Bernardin/Go-Live.git
 cd Go-Live
 ```
 
-2) Create a .env file with the following variables.
+2) Set a registry name with the following environment variable.
 ``` env
 REGISTRY=<whatever you want>
-BUILD_MODE=<dev or prod>
 ```
 
 3) Run services with Docker Compose. In dev mode, NPM is required because a volume will be used for Vite's HMR feature.
