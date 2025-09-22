@@ -55,5 +55,5 @@ To create your room all you have to do is start streaming with [OBS](https://obs
 ffmpeg -re -i "rick.mp4" -c:v copy -c:a aac -ar 44100 -ac 1 -f flv your_rtmp_url
 ```
 <div>
-  <img src="./examples/room.png" width="50%" />
+  <img src="./examples/roomA.png" width="50%" />
 </div>
