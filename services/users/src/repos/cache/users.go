@@ -1,0 +1,67 @@
+package cache
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"users/src/domain"
+
+	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
+)
+
+type cacheUser struct {
+	ID           domain.UUID `json:"id"`
+	Username     string      `json:"username"`
+	Email        string      `json:"email"`
+	PasswordHash []byte      `json:"password_hash"`
+	PasswordSalt string      `json:"password_salt"`
+}
+
+func (u *cacheUser) domainify() *domain.User {
+	if u == nil {
+		return nil
+	}
+
+	return &domain.User{
+		ID:           u.ID,
+		Username:     u.Username,
+		Email:        u.Email,
+		PasswordHash: u.PasswordHash,
+		PasswordSalt: u.PasswordSalt,
+	}
+}
+
+func (c *cache) InsertUser(ctx context.Context, u *domain.User) error {
+	key := fmt.Sprintf("user:%s", u.ID)
+	err := c.client.JSONSet(ctx, key, ".", &cacheUser{
+		ID:           u.ID,
+		Username:     u.Username,
+		Email:        u.Email,
+		PasswordHash: u.PasswordHash,
+		PasswordSalt: u.PasswordSalt,
+	}).Err()
+
+	return errors.WithStack(err)
+}
+
+func (c *cache) GetUser(ctx context.Context, userID domain.UUID) (*domain.User, error) {
+	key := fmt.Sprintf("user:%s", userID)
+
+	userJSON, err := c.client.JSONGet(ctx, key, ".").Result()
+	if err != nil {
+		switch {
+		case errors.Is(err, redis.Nil):
+			return nil, domain.ErrUserNotFound
+		default:
+			return nil, errors.Wrap(err, "cannot get")
+		}
+	}
+
+	var user cacheUser
+	if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
+		return nil, errors.Wrap(err, "cannot decode")
+	}
+
+	return user.domainify(), nil
+}

@@ -1,16 +1,30 @@
-import { createStore } from "vuex";
+import { createStore } from "vuex"
 
-export default createStore({
-  state: {
-    self: null,
-    room: null,
-  },
-  mutations: {
-    SET_SELF: (state, self) => (state.self = self),
-    SET_ROOM: (state, room) => (state.room = room),
-  },
-  actions: {
-    setSelf: ({ commit }, self) => commit("SET_SELF", self),
-    setRoom: ({ commit }, room) => commit("SET_ROOM", room),
-  },
-});
+export interface State {
+    session: any,
+    user: any,
+}
+
+export const store = createStore({
+    state: {
+        session: undefined,
+        user: undefined,
+    },
+    mutations: {
+        setSession: (state, session) => state.session = session,
+        setUser: (state, user) => state.user = user,
+    },
+    actions: {
+        async loadUser({ commit }, userID: string) {
+            console.log("HIHI")
+
+            const user = await new Promise<any>((resolve, _reject) => {
+                setTimeout(() => resolve({
+                    username: userID,
+                }), 300)
+            })
+
+            commit("setUser", user)
+        },
+    },
+})
