@@ -1,8 +1,10 @@
 package database
 
 import (
+	"context"
 	"testing"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
@@ -10,8 +12,7 @@ import (
 )
 
 func TestInsertUser(t *testing.T) {
-
-	ctx := t.Context()
+	t.Parallel()
 	repo := newTest(t)
 
 	tt := []struct {
@@ -28,22 +29,23 @@ func TestInsertUser(t *testing.T) {
 			name:    "Username Taken",
 			oldUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "foo", PasswordHash: []byte(``)},
 			newUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "bar", PasswordHash: []byte(``)},
-			err:     domain.ErrUsernameTaken,
+			err:     service.ErrUsernameTaken,
 		},
 		{
 			name:    "Email Taken",
 			oldUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "foo", PasswordHash: []byte(``)},
 			newUser: &domain.User{ID: domain.NewUUID(), Username: "bar", Email: "foo", PasswordHash: []byte(``)},
-			err:     domain.ErrEmailTaken,
+			err:     service.ErrEmailTaken,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
 
 			t.Cleanup(func() {
 				// Clear the users table.
-				_, err := repo.pool.Exec(ctx, `DELETE FROM users`)
+				_, err := repo.pool.Exec(context.Background(), `DELETE FROM users`)
 				require.NoError(t, err)
 			})
 
@@ -63,9 +65,11 @@ func TestInsertUser(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			// Do test with new user.
+			// TEST with new user.
 			err := repo.InsertUser(ctx, tc.newUser)
-			if !assert.ErrorIs(t, err, tc.err) || err != nil {
+
+			// Assert the error.
+			if assert.ErrorIs(t, err, tc.err) || err != nil {
 				return
 			}
 
@@ -73,11 +77,10 @@ func TestInsertUser(t *testing.T) {
 			q := `SELECT id, username, email, password_hash, password_salt FROM users WHERE id = $1`
 			rows, err := repo.pool.Query(ctx, q, tc.newUser.ID)
 			require.NoError(t, err)
-
-			// Decode the new user.
 			u, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[dbUser])
 			require.NoError(t, err)
 
+			// Assert the new user.
 			assert.Equal(t, tc.newUser.ID, u.ID)
 			assert.Equal(t, tc.newUser.Username, u.Username)
 			assert.Equal(t, tc.newUser.Email, u.Email)

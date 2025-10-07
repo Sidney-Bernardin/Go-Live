@@ -10,10 +10,44 @@ import (
 type User struct {
 	ID UUID
 
-	Username     string
+	Username     Username
 	Email        string
-	PasswordHash []byte
-	PasswordSalt string
+	PasswordHash PasswordHash
+	PasswordSalt PasswordSalt
+}
+
+type Username string
+
+func NewUsername(ctx context.Context, uname string) (Username, error) {
+	if len(uname) < 3 || 32 < len(uname) {
+		return "", NewDomainError(ctx, DomainErrorTypeUsernameInvalid, "Username must be between 3 and 32 characters.")
+	}
+	return Username(uname), nil
+}
+
+type Password string
+
+func NewPassword(ctx context.Context, passw string) (Password, error) {
+	if len(passw) < 8 || 100 < len(passw) {
+		return "", NewDomainError(ctx, DomainErrorTypePasswordInvalid, "Password must be between 8 and 100 characters.")
+	}
+	return Password(passw), nil
+}
+
+type PasswordSalt string
+
+func NewPasswordSalt() PasswordSalt {
+	return PasswordSalt(MustRandomString(32))
+}
+
+type PasswordHash []byte
+
+func NewPasswordHash(ctx context.Context, password Password, passwordSalt PasswordSalt) (PasswordHash, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(string(password)+string(passwordSalt)), 12)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed hashing passwaord")
+	}
+	return PasswordHash(passwordHash), nil
 }
 
 type SignupForm struct {
@@ -22,58 +56,29 @@ type SignupForm struct {
 	Password string
 }
 
-func (svc *service) Signup(ctx context.Context, form *SignupForm) (*Session, error) {
+func (signupForm *SignupForm) NewUser(ctx context.Context) (*User, error) {
 
-	passwordSalt := MustRandomString(32)
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(form.Password+passwordSalt), 12)
+	username, err := NewUsername(ctx, signupForm.Username)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot hash passwaord")
+		return nil, errors.Wrap(err, "failed creating username")
 	}
 
-	user := &User{
+	password, err := NewPassword(ctx, signupForm.Password)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating password")
+	}
+
+	passwordSalt := NewPasswordSalt()
+	passwordHash, err := NewPasswordHash(ctx, password, passwordSalt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating passwaord-hash")
+	}
+
+	return &User{
 		ID:           NewUUID(),
-		Username:     form.Username,
-		Email:        form.Email,
+		Username:     username,
+		Email:        signupForm.Email,
 		PasswordHash: passwordHash,
 		PasswordSalt: passwordSalt,
-	}
-
-	if err = svc.databaseRepo.InsertUser(ctx, user); err != nil {
-		return nil, errors.Wrap(err, "cannot insert user")
-	}
-
-	session := &Session{
-		ID:        NewUUID(),
-		UserID:    user.ID,
-		CSRFToken: MustRandomString(32),
-	}
-
-	if err = svc.cacheRepo.InsertSession(ctx, session); err != nil {
-		return nil, errors.Wrap(err, "cannot insert session")
-	}
-
-	return session, nil
-}
-
-func (svc *service) GetUser(ctx context.Context, userID UUID) (*User, error) {
-
-	user, err := svc.cacheRepo.GetUser(ctx, userID)
-	if !errors.Is(err, ErrUserNotFound) {
-		return user, errors.Wrap(err, "cannot get user from cache")
-	}
-
-	user, err = svc.databaseRepo.GetUserByID(ctx, userID)
-	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			return nil, newDomainError(ctx, DomainErrorTypeUserDoesNotExist, "User doesn't exist.")
-		}
-
-		return nil, errors.Wrap(err, "cannot get user from database")
-	}
-
-	if err := svc.databaseRepo.InsertUser(ctx, user); err != nil {
-		return nil, errors.Wrap(err, "cannot insert user into database")
-	}
-
-	return user, nil
+	}, nil
 }

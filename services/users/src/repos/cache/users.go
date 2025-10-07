@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -25,10 +26,10 @@ func (u *cacheUser) domainify() *domain.User {
 
 	return &domain.User{
 		ID:           u.ID,
-		Username:     u.Username,
+		Username:     domain.Username(u.Username),
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
-		PasswordSalt: u.PasswordSalt,
+		PasswordSalt: domain.PasswordSalt(u.PasswordSalt),
 	}
 }
 
@@ -36,10 +37,10 @@ func (c *cache) InsertUser(ctx context.Context, u *domain.User) error {
 	key := fmt.Sprintf("user:%s", u.ID)
 	err := c.client.JSONSet(ctx, key, ".", &cacheUser{
 		ID:           u.ID,
-		Username:     u.Username,
+		Username:     string(u.Username),
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
-		PasswordSalt: u.PasswordSalt,
+		PasswordSalt: string(u.PasswordSalt),
 	}).Err()
 
 	return errors.WithStack(err)
@@ -52,7 +53,7 @@ func (c *cache) GetUser(ctx context.Context, userID domain.UUID) (*domain.User, 
 	if err != nil {
 		switch {
 		case errors.Is(err, redis.Nil):
-			return nil, domain.ErrUserNotFound
+			return nil, service.ErrUserNotFound
 		default:
 			return nil, errors.Wrap(err, "cannot get")
 		}

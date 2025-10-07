@@ -4,7 +4,7 @@ import (
 	"context"
 	"embed"
 	"users/src/config"
-	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -20,7 +20,7 @@ type databaseRepository struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, cfg *config.Config) (domain.DatabaseRepository, error) {
+func New(ctx context.Context, cfg *config.Config) (service.DatabaseRepository, error) {
 
 	pool, err := pgxpool.New(ctx, cfg.PostgresUrl)
 	if err != nil {

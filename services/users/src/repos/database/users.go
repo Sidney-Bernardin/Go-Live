@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,10 +26,10 @@ func (u *dbUser) domainify() *domain.User {
 
 	return &domain.User{
 		ID:           u.ID,
-		Username:     u.Username,
+		Username:     domain.Username(u.Username),
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
-		PasswordSalt: u.PasswordSalt,
+		PasswordSalt: domain.PasswordSalt(u.PasswordSalt),
 	}
 }
 
@@ -56,13 +57,13 @@ func (db *databaseRepository) InsertUser(ctx context.Context, user *domain.User)
 			case "users_username_key":
 				switch pgErr.Code {
 				case "23505":
-					return domain.ErrUsernameTaken
+					return service.ErrUsernameTaken
 				}
 
 			case "users_email_key":
 				switch pgErr.Code {
 				case "23505":
-					return domain.ErrEmailTaken
+					return service.ErrEmailTaken
 				}
 			}
 		}
@@ -87,7 +88,7 @@ func (db *databaseRepository) GetUserByID(ctx context.Context, userID domain.UUI
 	user, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[dbUser])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrUserNotFound
+			return nil, service.ErrUserNotFound
 		}
 
 		return nil, errors.Wrap(err, "failed collecting rows")
