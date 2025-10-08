@@ -44,8 +44,7 @@ func (db *databaseRepository) InsertUser(ctx context.Context, user *domain.User)
 		user.Username,
 		user.Email,
 		user.PasswordHash,
-		user.PasswordSalt,
-	)
+		user.PasswordSalt)
 
 	if err != nil {
 		var pgErr *pgconn.PgError

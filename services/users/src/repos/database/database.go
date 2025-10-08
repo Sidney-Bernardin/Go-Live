@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"embed"
-	"users/src/config"
+	"users/src"
 	"users/src/domain/service"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -20,28 +20,28 @@ type databaseRepository struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, cfg *config.Config) (service.DatabaseRepository, error) {
+func New(ctx context.Context, config *src.Config) (service.DatabaseRepository, error) {
 
-	pool, err := pgxpool.New(ctx, cfg.PostgresUrl)
+	pool, err := pgxpool.New(ctx, config.PostgresUrl)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating connection pool")
 	}
 
-	if err := doMigrations(cfg); err != nil {
+	if err := doMigrations(config); err != nil {
 		return nil, errors.Wrap(err, "failed migrations")
 	}
 
 	return &databaseRepository{pool}, nil
 }
 
-func doMigrations(cfg *config.Config) error {
+func doMigrations(config *src.Config) error {
 
 	source, err := iofs.New(migrations, "Migrations")
 	if err != nil {
 		return errors.Wrap(err, "failed creating migration source")
 	}
 
-	m, err := migrate.NewWithSourceInstance("iofs", source, cfg.PostgresUrl)
+	m, err := migrate.NewWithSourceInstance("iofs", source, config.PostgresUrl)
 	if err != nil {
 		return errors.Wrap(err, "failed creating migrator")
 	}
@@ -51,16 +51,4 @@ func doMigrations(cfg *config.Config) error {
 	}
 
 	return nil
-}
-
-type rowModel[D any] interface {
-	domainify() *D
-}
-
-func domainifyMany[R rowModel[D], D any](rr []R) []*D {
-	dd := make([]*D, len(rr))
-	for i, r := range rr {
-		dd[i] = r.domainify()
-	}
-	return dd
 }

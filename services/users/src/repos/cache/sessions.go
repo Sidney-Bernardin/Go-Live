@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -24,7 +25,7 @@ func (s *cacheSession) domainify() *domain.Session {
 	return &domain.Session{
 		ID:        s.ID,
 		UserID:    s.UserID,
-		CSRFToken: s.CSRFToken,
+		CSRFToken: domain.CSRFToken(s.CSRFToken),
 	}
 }
 
@@ -35,9 +36,9 @@ func (c *cache) InsertSession(ctx context.Context, session *domain.Session) erro
 	jsonSetCmd := p.JSONSet(ctx, key, ".", &cacheSession{
 		ID:        session.ID,
 		UserID:    session.UserID,
-		CSRFToken: session.CSRFToken,
+		CSRFToken: string(session.CSRFToken),
 	})
-	expireCmd := p.Expire(ctx, key, c.cfg.SessionDuration)
+	expireCmd := p.Expire(ctx, key, c.config.SessionDuration)
 
 	if _, err := p.Exec(ctx); err != nil {
 		return errors.Wrap(err, "command executions failed")
@@ -59,12 +60,11 @@ func (c *cache) GetSession(ctx context.Context, sessionID domain.UUID) (*domain.
 
 	sessionJSON, err := c.client.JSONGet(ctx, key, ".").Result()
 	if err != nil {
-		switch {
-		case errors.Is(err, redis.Nil):
-			return nil, domain.ErrSessionNotFound
-		default:
-			return nil, errors.Wrap(err, "cannot get")
+		if errors.Is(err, redis.Nil) {
+			return nil, service.ErrSessionNotFound
 		}
+
+		return nil, errors.Wrap(err, "cannot get")
 	}
 
 	var session cacheSession

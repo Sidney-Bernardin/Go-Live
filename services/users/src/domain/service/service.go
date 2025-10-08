@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"users/src/config"
+	"users/src"
 	"users/src/domain"
 
 	"github.com/pkg/errors"
@@ -30,14 +30,14 @@ type CacheRepository interface {
 }
 
 type Service struct {
-	config *config.Config
+	config *src.Config
 
 	databaseRepo DatabaseRepository
 	cacheRepo    CacheRepository
 }
 
 func NewService(
-	config *config.Config,
+	config *src.Config,
 	databaseRepo DatabaseRepository,
 	cacheRepo CacheRepository,
 ) *Service {

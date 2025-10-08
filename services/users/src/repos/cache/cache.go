@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"users/src/config"
+	"users/src"
 	"users/src/domain/service"
 
 	"github.com/pkg/errors"
@@ -10,20 +10,20 @@ import (
 )
 
 type cache struct {
-	cfg *config.Config
+	config *src.Config
 
 	client *redis.Client
 }
 
-func New(ctx context.Context, cfg *config.Config) (service.CacheRepository, error) {
+func New(ctx context.Context, config *src.Config) (service.CacheRepository, error) {
 
 	client := redis.NewClient(&redis.Options{
-		Addr: cfg.RedisAddr,
+		Addr: config.RedisAddr,
 	})
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, errors.Wrap(err, "ping failed")
 	}
 
-	return &cache{cfg, client}, nil
+	return &cache{config, client}, nil
 }

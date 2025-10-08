@@ -1,4 +1,4 @@
-package config
+package src
 
 import (
 	"time"
@@ -8,6 +8,9 @@ import (
 )
 
 type Config struct {
+	HTTPAddr                string `split_words:"true" required:"true"`
+	HTTPSessionCookieDomain string `split_words:"true" required:"true"`
+
 	SessionDuration time.Duration `split_words:"true" required:"true"`
 
 	PostgresUrl string `split_words:"true" required:"true"`
@@ -15,7 +18,7 @@ type Config struct {
 }
 
 func NewConfig() (*Config, error) {
-	var cfg Config
-	err := envconfig.Process("app", &cfg)
-	return &cfg, errors.Wrap(err, "cannot process config")
+	var config Config
+	err := envconfig.Process("app", &config)
+	return &config, errors.Wrap(err, "cannot process config")
 }

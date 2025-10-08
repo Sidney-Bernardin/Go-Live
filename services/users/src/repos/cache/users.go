@@ -51,12 +51,11 @@ func (c *cache) GetUser(ctx context.Context, userID domain.UUID) (*domain.User, 
 
 	userJSON, err := c.client.JSONGet(ctx, key, ".").Result()
 	if err != nil {
-		switch {
-		case errors.Is(err, redis.Nil):
+		if errors.Is(err, redis.Nil) {
 			return nil, service.ErrUserNotFound
-		default:
-			return nil, errors.Wrap(err, "cannot get")
 		}
+
+		return nil, errors.Wrap(err, "cannot get")
 	}
 
 	var user cacheUser
