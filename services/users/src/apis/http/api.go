@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type API struct {
+type Api struct {
 	config *src.Config
 	logger *slog.Logger
 	svc    *service.Service
@@ -19,19 +19,19 @@ type API struct {
 	server *http.Server
 }
 
-func NewAPI(logger *slog.Logger, config *src.Config, svc *service.Service) *API {
+func New(config *src.Config, logger *slog.Logger, svc *service.Service) *Api {
 
 	server := &http.Server{
-		Addr: config.HTTPAddr,
+		Addr: config.HttpAddr,
 	}
 
-	api := &API{config, logger, svc, server}
+	api := &Api{config, logger, svc, server}
 	api.routes()
 
 	return api
 }
 
-func (api *API) write(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
+func (api *Api) write(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		api.logger.Error("Internal Server Error", "err", err.Error())
@@ -47,7 +47,7 @@ var domainErrorCodes = map[domain.DomainErrorType]int{
 	domain.DomainErrorTypePasswordInvalid: http.StatusBadRequest,
 }
 
-func (api *API) err(w http.ResponseWriter, r *http.Request, err error) {
+func (api *Api) err(w http.ResponseWriter, r *http.Request, err error) {
 
 	type domainErrorView struct {
 		Type    string         `json:"type"`
@@ -71,13 +71,13 @@ func (api *API) err(w http.ResponseWriter, r *http.Request, err error) {
 	})
 }
 
-func (api *API) requestAttr(r *http.Request) slog.Attr {
+func (api *Api) requestAttr(r *http.Request) slog.Attr {
 	return slog.Group("request",
 		"method", r.Method,
 		"path", r.URL.Path,
 	)
 }
 
-func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (api *Api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api.server.Handler.ServeHTTP(w, r)
 }

@@ -36,7 +36,7 @@ type Service struct {
 	cacheRepo    CacheRepository
 }
 
-func NewService(
+func New(
 	config *src.Config,
 	databaseRepo DatabaseRepository,
 	cacheRepo CacheRepository,

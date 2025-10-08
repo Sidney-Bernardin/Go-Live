@@ -8,8 +8,8 @@ import (
 )
 
 type Config struct {
-	HTTPAddr                string `split_words:"true" required:"true"`
-	HTTPSessionCookieDomain string `split_words:"true" required:"true"`
+	HttpAddr                string `split_words:"true" required:"true"`
+	HttpSessionCookieDomain string `split_words:"true" required:"true"`
 
 	SessionDuration time.Duration `split_words:"true" required:"true"`
 

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"net/http"
 	"users/src"
 	"users/src/domain"
@@ -24,7 +23,7 @@ func newUserView(u *domain.User) *userView {
 	}
 }
 
-func (api *API) handleGetUser(w http.ResponseWriter, r *http.Request) {
+func (api *Api) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	details := ctx.Value(domain.DomainErrorDetailsKey).(map[string]any)
 

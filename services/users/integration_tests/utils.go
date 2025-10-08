@@ -1,8 +1,11 @@
-package database
+package test
 
 import (
+	"database/sql"
 	"testing"
-	"users/src/config"
+	"users/src"
+	"users/src/domain/service"
+	"users/src/repos/database"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -10,9 +13,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-func newTest(t *testing.T) *databaseRepository {
+func NewDatabaseRepository(t *testing.T) (service.DatabaseRepository, *sql.DB) {
 	t.Helper()
-
 	ctx := t.Context()
 
 	container, err := postgres.Run(ctx, "postgres:18-alpine",
@@ -24,22 +26,16 @@ func newTest(t *testing.T) *databaseRepository {
 		assert.NoErrorf(t, err, "Failed terminating container: %v", err)
 	})
 
-	if err != nil {
-		require.NoErrorf(t, err, "Failed running container: %v", err)
-	}
+	require.NoErrorf(t, err, "Failed running container: %v", err)
 
 	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		require.NoErrorf(t, err, "Failed getting container connection string: %v", err)
-	}
+	require.NoErrorf(t, err, "Failed getting container connection string: %v", err)
 
-	repo, err := New(ctx, &config.Config{
-		PostgresUrl: connStr,
-	})
+	repo, err := database.New(ctx, &src.Config{PostgresUrl: connStr})
+	require.NoErrorf(t, err, "Failed creating repository: %v", err)
 
-	if err != nil {
-		require.NoErrorf(t, err, "Failed creating repository: %v", err)
-	}
+	conn, err := sql.Open("", "")
+	require.NoErrorf(t, err, "Failed opening database: %v", err)
 
-	return repo.(*databaseRepository)
+	return repo, conn
 }

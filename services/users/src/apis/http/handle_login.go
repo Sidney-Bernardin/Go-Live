@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (api *API) newSessionCookie(session *domain.Session) *http.Cookie {
+func (api *Api) newSessionCookie(session *domain.Session) *http.Cookie {
 	return &http.Cookie{
 		Name:     "SESSION_ID",
 		Value:    session.ID.String(),
-		Domain:   api.config.HTTPSessionCookieDomain,
+		Domain:   api.config.HttpSessionCookieDomain,
 		Expires:  time.Now().Add(api.config.SessionDuration),
 		Secure:   true,
 		HttpOnly: true,
@@ -21,7 +21,7 @@ func (api *API) newSessionCookie(session *domain.Session) *http.Cookie {
 	}
 }
 
-func (api *API) handleSignup(w http.ResponseWriter, r *http.Request) {
+func (api *Api) handleSignup(w http.ResponseWriter, r *http.Request) {
 
 	var signupForm *domain.SignupForm
 	if err := json.NewDecoder(r.Body).Decode(&signupForm); err != nil {
