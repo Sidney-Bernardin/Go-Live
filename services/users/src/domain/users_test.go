@@ -11,93 +11,65 @@ import (
 func TestNewUsername(t *testing.T) {
 	t.Parallel()
 
-	tt := []struct {
-		name            string
-		username        string
-		domainErrorType DomainErrorType
-	}{
-		{
-			name:     "Username",
-			username: "foobarbaz",
-		},
-		{
-			name:            "Username Too Short",
-			username:        "ab",
-			domainErrorType: DomainErrorTypeUsernameInvalid,
-		},
-		{
-			name:            "Username Too Long",
-			username:        MustRandomString(34),
-			domainErrorType: DomainErrorTypeUsernameInvalid,
-		},
-	}
+	t.Run("work", func(t *testing.T) {
+		inUsername := "foobarbaz"
+		outUsername, err := NewUsername(t.Context(), inUsername)
 
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
+		assert.Equal(t, inUsername, string(outUsername))
+		assert.NoError(t, err)
+	})
 
-			// Create username.
-			username, err := NewUsername(t.Context(), tc.username)
+	t.Run("too_short", func(t *testing.T) {
+		inUsername := ""
+		outUsername, err := NewUsername(t.Context(), inUsername)
 
-			if tc.domainErrorType == "" {
-				assert.Equal(t, tc.username, string(username))
-				assert.NoError(t, err)
-				return
-			}
+		assert.Equal(t, "", string(outUsername))
+		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
+			assert.Equal(t, DomainErrorTypeUsernameInvalid, domainErr.Type)
+		}
+	})
 
-			var domainErr *DomainError
-			if assert.ErrorAs(t, err, &domainErr) {
-				assert.Equal(t, tc.domainErrorType, domainErr.Type)
-			}
+	t.Run("too_long", func(t *testing.T) {
+		inUsername := MustRandomString(34)
+		outUsername, err := NewUsername(t.Context(), inUsername)
 
-			assert.Equal(t, "", string(username))
-		})
-	}
+		assert.Equal(t, "", string(outUsername))
+		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
+			assert.Equal(t, DomainErrorTypeUsernameInvalid, domainErr.Type)
+		}
+	})
 }
 
 func TestNewPassword(t *testing.T) {
 	t.Parallel()
 
-	tt := []struct {
-		name            string
-		password        string
-		domainErrorType DomainErrorType
-	}{
-		{
-			name:     "Password",
-			password: "foobarbaz",
-		},
-		{
-			name:            "Password Too Short",
-			password:        "abcdefg",
-			domainErrorType: DomainErrorTypePasswordInvalid,
-		},
-		{
-			name:            "Password Too Long",
-			password:        MustRandomString(102),
-			domainErrorType: DomainErrorTypePasswordInvalid,
-		},
-	}
+	t.Run("work", func(t *testing.T) {
+		inPassword := "foobarbaz"
+		outPassword, err := NewPassword(t.Context(), inPassword)
 
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
+		assert.Equal(t, inPassword, string(outPassword))
+		assert.NoError(t, err)
+	})
 
-			// Create password.
-			password, err := NewPassword(t.Context(), tc.password)
+	t.Run("too_short", func(t *testing.T) {
+		inPassword := ""
+		outPassword, err := NewPassword(t.Context(), inPassword)
 
-			if tc.domainErrorType == "" {
-				assert.Equal(t, tc.password, string(password))
-				assert.NoError(t, err)
-				return
-			}
+		assert.Equal(t, "", string(outPassword))
+		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
+			assert.Equal(t, DomainErrorTypePasswordInvalid, domainErr.Type)
+		}
+	})
 
-			var domainErr *DomainError
-			if assert.ErrorAs(t, err, &domainErr) {
-				assert.Equal(t, tc.domainErrorType, domainErr.Type)
-			}
+	t.Run("too_long", func(t *testing.T) {
+		inPassword := MustRandomString(102)
+		outPassword, err := NewPassword(t.Context(), inPassword)
 
-			assert.Equal(t, "", string(password))
-		})
-	}
+		assert.Equal(t, "", string(outPassword))
+		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
+			assert.Equal(t, DomainErrorTypePasswordInvalid, domainErr.Type)
+		}
+	})
 }
 
 func TestNewPasswordSalt(t *testing.T) {

@@ -38,8 +38,8 @@ const qInsertUser = `
 	VALUES ($1, $2, $3, $4, $5)
 `
 
-func (db *databaseRepository) InsertUser(ctx context.Context, user *domain.User) error {
-	_, err := db.pool.Exec(ctx, qInsertUser,
+func (repo *databaseRepository) InsertUser(ctx context.Context, user *domain.User) error {
+	_, err := repo.pool.Exec(ctx, qInsertUser,
 		user.ID,
 		user.Username,
 		user.Email,
@@ -77,9 +77,9 @@ const qGetUserByID = `
 	SELECT * FROM users WHERE id = $1
 `
 
-func (db *databaseRepository) GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error) {
+func (repo *databaseRepository) GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error) {
 
-	rows, err := db.pool.Query(ctx, qGetUserByID, userID)
+	rows, err := repo.pool.Query(ctx, qGetUserByID, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed selecting")
 	}

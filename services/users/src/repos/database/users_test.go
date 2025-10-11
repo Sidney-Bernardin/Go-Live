@@ -1,91 +1,78 @@
 package database
 
 import (
-	"context"
 	"testing"
 	"users/src/domain"
 	"users/src/domain/service"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInsertUser(t *testing.T) {
 	t.Parallel()
-	repo := newTest(t)
 
-	tt := []struct {
-		name    string
-		oldUser *domain.User
-		newUser *domain.User
-		err     error
-	}{
-		{
-			name:    "Insert",
-			newUser: &domain.User{ID: domain.NewUUID(), PasswordHash: []byte(``)},
-		},
-		{
-			name:    "Username Taken",
-			oldUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "foo", PasswordHash: []byte(``)},
-			newUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "bar", PasswordHash: []byte(``)},
-			err:     service.ErrUsernameTaken,
-		},
-		{
-			name:    "Email Taken",
-			oldUser: &domain.User{ID: domain.NewUUID(), Username: "foo", Email: "foo", PasswordHash: []byte(``)},
-			newUser: &domain.User{ID: domain.NewUUID(), Username: "bar", Email: "foo", PasswordHash: []byte(``)},
-			err:     service.ErrEmailTaken,
-		},
-	}
+	ctx := t.Context()
+	repo := newTestDatabase(t)
 
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := t.Context()
+	// Insert a new dummy user.
+	dummyUser := newTestUser(t)
+	_, err := repo.pool.Exec(ctx,
+		`INSERT INTO users (id, username, email, password_hash, password_salt) VALUES ($1, $2, $3, $4, $5)`,
+		dummyUser.ID, dummyUser.Username, dummyUser.Email, dummyUser.PasswordHash, dummyUser.PasswordSalt)
+	require.NoError(t, err)
 
-			t.Cleanup(func() {
-				// Clear the users table.
-				_, err := repo.pool.Exec(context.Background(), `DELETE FROM users`)
-				require.NoError(t, err)
-			})
+	t.Run("work", func(t *testing.T) {
+		user := newTestUser(t)
 
-			if tc.oldUser != nil {
+		err := repo.InsertUser(t.Context(), user)
+		assert.NoError(t, err)
+		repo.assertUser(t, user.ID, user)
+	})
 
-				// Insert old user.
-				_, err := repo.pool.Exec(ctx,
-					`
-						INSERT INTO users (id, username, email, password_hash, password_salt)
-						VALUES ($1, $2, $3, $4, $5)
-					`,
-					tc.oldUser.ID,
-					tc.oldUser.Username,
-					tc.oldUser.Email,
-					tc.oldUser.PasswordHash,
-					tc.oldUser.PasswordSalt)
-				require.NoError(t, err)
-			}
+	t.Run("username_conflict", func(t *testing.T) {
+		user := newTestUser(t)
+		user.Username = dummyUser.Username
 
-			// TEST with new user.
-			err := repo.InsertUser(ctx, tc.newUser)
+		err := repo.InsertUser(t.Context(), user)
+		assert.Equal(t, service.ErrUsernameTaken, err)
+		repo.assertUser(t, user.ID, nil)
+	})
 
-			// Assert the error.
-			if assert.ErrorIs(t, err, tc.err) || err != nil {
-				return
-			}
+	t.Run("email_conflict", func(t *testing.T) {
+		user := newTestUser(t)
+		user.Email = dummyUser.Email
 
-			// Get the new user.
-			q := `SELECT id, username, email, password_hash, password_salt FROM users WHERE id = $1`
-			rows, err := repo.pool.Query(ctx, q, tc.newUser.ID)
-			require.NoError(t, err)
-			u, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[dbUser])
-			require.NoError(t, err)
+		err := repo.InsertUser(t.Context(), user)
+		assert.Equal(t, service.ErrEmailTaken, err)
+		repo.assertUser(t, user.ID, nil)
+	})
+}
 
-			// Assert the new user.
-			assert.Equal(t, tc.newUser.ID, u.ID)
-			assert.Equal(t, tc.newUser.Username, u.Username)
-			assert.Equal(t, tc.newUser.Email, u.Email)
-			assert.Equal(t, tc.newUser.PasswordHash, u.PasswordHash)
-			assert.Equal(t, tc.newUser.PasswordSalt, u.PasswordSalt)
-		})
-	}
+func TestGetUserByID(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	db := newTestDatabase(t)
+
+	// Insert a new dummy user.
+	dummyUser := newTestUser(t)
+	_, err := db.pool.Exec(ctx,
+		`INSERT INTO users (id, username, email, password_hash, password_salt) VALUES ($1, $2, $3, $4, $5)`,
+		dummyUser.ID, dummyUser.Username, dummyUser.Email, dummyUser.PasswordHash, dummyUser.PasswordSalt)
+	require.NoError(t, err)
+
+	t.Run("work", func(t *testing.T) {
+		user, err := db.GetUserByID(t.Context(), dummyUser.ID)
+		assert.NoError(t, err)
+		db.assertUser(t, dummyUser.ID, user)
+	})
+
+	t.Run("not_found", func(t *testing.T) {
+		user := newTestUser(t)
+		user.Username = dummyUser.Username
+
+		user, err := db.GetUserByID(t.Context(), domain.NewUUID())
+		assert.Equal(t, service.ErrUserNotFound, err)
+	})
 }

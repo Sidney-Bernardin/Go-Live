@@ -8,22 +8,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-type userView struct {
+type UserView struct {
 	ID string `json:"id"`
 
 	Username string `json:"username,omitempty"`
 	Email    string `json:"email,omitempty"`
 }
 
-func newUserView(u *domain.User) *userView {
-	return &userView{
+func newUserView(u *domain.User) *UserView {
+	return &UserView{
 		ID:       u.ID.String(),
 		Username: string(u.Username),
 		Email:    u.Email,
 	}
 }
 
-func (api *Api) handleGetUser(w http.ResponseWriter, r *http.Request) {
+func (api *Api) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	details := ctx.Value(domain.DomainErrorDetailsKey).(map[string]any)
 
@@ -61,7 +61,7 @@ func (api *Api) handleGetUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		api.write(w, r, http.StatusOK, src.MapSlice(users, func(user *domain.User) *userView {
+		api.write(w, r, http.StatusOK, src.MapSlice(users, func(user *domain.User) *UserView {
 			return newUserView(user)
 		}))
 	}

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id uuid PRIMARY KEY,
 
     username varchar(255) NOT NULL UNIQUE,
     email text NOT NULL UNIQUE,

@@ -31,7 +31,8 @@ type DomainError struct {
 }
 
 func NewDomainError(ctx context.Context, t DomainErrorType, msg string) *DomainError {
-	return &DomainError{t, msg, ctx.Value(DomainErrorDetailsKey).(map[string]any)}
+	details, _ := ctx.Value(DomainErrorDetailsKey).(map[string]any)
+	return &DomainError{t, msg, details}
 }
 
 func (e *DomainError) Error() string {
