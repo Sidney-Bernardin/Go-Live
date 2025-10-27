@@ -15,6 +15,10 @@ func (svc *Service) Signup(ctx context.Context, signupForm *domain.SignupForm) (
 	}
 
 	if err = svc.databaseRepo.InsertUser(ctx, user); err != nil {
+		if errors.Is(err, ErrUsernameTaken) {
+			return nil, domain.NewDomainError(ctx, domain.DomainErrorTypeUsernameInvalid, "Username already in use.")
+		}
+
 		return nil, errors.Wrap(err, "failed inserting user into database")
 	}
 

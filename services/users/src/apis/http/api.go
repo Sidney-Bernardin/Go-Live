@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Api struct {
+type API struct {
 	config *src.Config
 	logger *slog.Logger
 	svc    *service.Service
@@ -19,23 +19,19 @@ type Api struct {
 	server *http.Server
 }
 
-func New(config *src.Config, logger *slog.Logger, svc *service.Service) *Api {
-
+func New(config *src.Config, logger *slog.Logger, svc *service.Service) *API {
 	server := &http.Server{
 		Addr: config.HttpAddr,
 	}
 
-	api := &Api{config, logger, svc, server}
+	api := &API{config, logger, svc, server}
 	api.routes()
 
 	return api
 }
 
-func (api *Api) write(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		api.logger.Error("Internal Server Error", "err", err.Error())
-	}
+func Run() {
+
 }
 
 var domainErrorCodes = map[domain.DomainErrorType]int{
@@ -47,37 +43,45 @@ var domainErrorCodes = map[domain.DomainErrorType]int{
 	domain.DomainErrorTypePasswordInvalid: http.StatusBadRequest,
 }
 
-func (api *Api) err(w http.ResponseWriter, r *http.Request, err error) {
+func (api *API) err(w http.ResponseWriter, r *http.Request, statusCode int, err error) {
 
-	type domainErrorView struct {
-		Type    string         `json:"type"`
-		Message string         `json:"message,omitempty"`
+	var view struct {
+		Type    string         `json:"type,omitempty"`
+		Msg     string         `json:"message,omitempty"`
 		Details map[string]any `json:"details,omitempty"`
 	}
 
-	var domainErr *domain.DomainError
-	if !errors.As(err, &domainErr) {
-		api.write(w, r, http.StatusInternalServerError, err)
-		api.logger.LogAttrs(r.Context(), slog.LevelError, "Internal Server Error",
+	if domainErr := new(domain.DomainError); errors.As(err, &domainErr) {
+		statusCode = domainErrorCodes[domainErr.Type]
+		view.Type = string(domainErr.Type)
+		view.Msg = domainErr.Msg
+		view.Details = domainErr.Details
+	} else if statusCode >= 500 {
+		view.Msg = http.StatusText(statusCode)
+		api.logger.LogAttrs(r.Context(), slog.LevelError, view.Msg,
 			slog.Group("error", "msg", err.Error()),
 			api.requestAttr(r))
-		return
+	} else {
+		view.Msg = err.Error()
 	}
 
-	api.write(w, r, domainErrorCodes[domainErr.Type], &domainErrorView{
-		Type:    string(domainErr.Type),
-		Message: domainErr.Message,
-		Details: domainErr.Details,
-	})
+	api.write(w, statusCode, view)
 }
 
-func (api *Api) requestAttr(r *http.Request) slog.Attr {
+func (api *API) write(w http.ResponseWriter, statusCode int, data any) {
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		api.logger.Error("Internal Server Error", "err", err.Error())
+	}
+}
+
+func (api *API) requestAttr(r *http.Request) slog.Attr {
 	return slog.Group("request",
 		"method", r.Method,
 		"path", r.URL.Path,
 	)
 }
 
-func (api *Api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api.server.Handler.ServeHTTP(w, r)
 }

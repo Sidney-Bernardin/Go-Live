@@ -6,17 +6,29 @@ services:
     build:
       context: ./services/users
       dockerfile: Dockerfile
-    ports:
-      - 8100:8000
-      - 8101:8001
-    command: ./app
-    depends_on:
-      - users-db
+      target: test
+    environment:
+      APP_HTTP_ADDR: :8000
+      APP_HTTP_SESSION_COOKIE_DOMAIN: abc
+      APP_GRPC_ADDR: :8001
 
-  users-db:
-    container_name: users-db
+      APP_SESSION_DURATION: 24h
+
+      APP_POSTGRES_URL: postgres://postgres:password@users-database:5432/users?sslmode=disable
+      APP_REDIS_ADDR: users-cache:6379
+    volumes:
+      - ./tmp/users/snapshots:/app/src/apis/http/__snapshots__/
+    depends_on:
+      - users-database
+      - users-cache
+
+  users-database:
+    container_name: users-database
     image: postgres:18
     environment:
+      POSTGRES_DB: users
       POSTGRES_PASSWORD: password
-    ports:
-      - 8199:5432
+
+  users-cache:
+    container_name: users-cache
+    image: redis:8.2.2

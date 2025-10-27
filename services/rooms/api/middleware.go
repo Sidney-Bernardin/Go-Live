@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (a *api) logRequest(next http.Handler) http.Handler {
+func (a *Api) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Log the request.

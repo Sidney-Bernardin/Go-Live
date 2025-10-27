@@ -2,13 +2,16 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID UUID
+	ID        UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
 	Username     Username
 	Email        string

@@ -23,45 +23,42 @@ func newUserView(u *domain.User) *UserView {
 	}
 }
 
-func (api *Api) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	details := ctx.Value(domain.DomainErrorDetailsKey).(map[string]any)
 
 	switch {
 
 	case r.URL.Query().Has("id"):
 
-		userID, err := domain.NewUUIDFromString(ctx, r.URL.Query().Get("id"))
+		userID, err := domain.ParseUUID(ctx, r.URL.Query().Get("id"))
 		if err != nil {
-			api.err(w, r, errors.Wrap(err, "failed creating UUID"))
+			api.err(w, r, http.StatusBadRequest, errors.Wrap(err, "failed creating UUID"))
 			return
 		}
-		details["user_id"] = userID
 
 		user, err := api.svc.GetUserByID(ctx, userID)
 		if err != nil {
-			api.err(w, r, errors.Wrap(err, "failed getting user"))
+			api.err(w, r, http.StatusInternalServerError, errors.Wrap(err, "failed getting user"))
 			return
 		}
 
-		api.write(w, r, http.StatusOK, newUserView(user))
+		api.write(w, http.StatusOK, newUserView(user))
 
 	default:
 
 		username, err := domain.NewUsername(ctx, r.URL.Query().Get("username"))
 		if err != nil {
-			api.err(w, r, errors.Wrap(err, "failed creating username"))
+			api.err(w, r, http.StatusBadRequest, errors.Wrap(err, "failed creating username"))
 			return
 		}
-		details["username"] = username
 
 		users, err := api.svc.SearchUsers(ctx, username)
 		if err != nil {
-			api.err(w, r, errors.Wrap(err, "failed getting users"))
+			api.err(w, r, http.StatusInternalServerError, errors.Wrap(err, "failed getting users"))
 			return
 		}
 
-		api.write(w, r, http.StatusOK, src.MapSlice(users, func(user *domain.User) *UserView {
+		api.write(w, http.StatusOK, src.MapSlice(users, func(user *domain.User) *UserView {
 			return newUserView(user)
 		}))
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (a *api) svrErr(err error) domain.ProblemDetail {
+func (a *Api) svrErr(err error) domain.ProblemDetail {
 	a.logger.Error().Stack().Err(err).Msg("Server Error")
 	return domain.ProblemDetail{
 		Problem: domain.ProblemServerError,
@@ -21,7 +21,7 @@ func (a *api) svrErr(err error) domain.ProblemDetail {
 // httpErr writes the cause of e to the connection. If e wasn't caused by a
 // ProblemDetail, it's is logged and a new server error ProblemDetail is
 // written instead.
-func (a *api) httpErr(w http.ResponseWriter, e error) {
+func (a *Api) httpErr(w http.ResponseWriter, e error) {
 
 	// If the error wasn't caused by a ProblemDetail, treat it as a server error.
 	pd, ok := errors.Cause(e).(domain.ProblemDetail)
@@ -40,7 +40,7 @@ func (a *api) httpErr(w http.ResponseWriter, e error) {
 // wsErr writes the cause of e as a close message to the connection. If e wasn't
 // caused by a ProblemDetail, it's is logged and a new server error ProblemDetail
 // is written instead.
-func (a *api) wsErr(conn *websocket.Conn, e error) {
+func (a *Api) wsErr(conn *websocket.Conn, e error) {
 	defer conn.Close()
 
 	// If the error wasn't caused by a ProblemDetail, treat it as a server error.

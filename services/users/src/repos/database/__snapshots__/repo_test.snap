@@ -1,0 +1,70 @@
+
+[TestGetUser/successful - 1]
+[
+ {
+  "CreatedAt": "<Any value>",
+  "Email": "email0",
+  "ID": "<Any value>",
+  "PasswordHash": "cGFzc3dvcmRoYXNoMA==",
+  "PasswordSalt": "passwordsalt0",
+  "UpdatedAt": "<Any value>",
+  "Username": "username0"
+ }
+]
+---
+
+[TestGetUser/not_found - 1]
+[
+ {
+  "CreatedAt": "<Any value>",
+  "Email": "email0",
+  "ID": "<Any value>",
+  "PasswordHash": "cGFzc3dvcmRoYXNoMA==",
+  "PasswordSalt": "passwordsalt0",
+  "UpdatedAt": "<Any value>",
+  "Username": "username0"
+ }
+]
+---
+
+[TestInsertUser/successful - 1]
+[
+ {
+  "CreatedAt": "<Any value>",
+  "Email": "",
+  "ID": "<Any value>",
+  "PasswordHash": "",
+  "PasswordSalt": "",
+  "UpdatedAt": "<Any value>",
+  "Username": ""
+ }
+]
+---
+
+[TestInsertUser/username_taken - 1]
+[
+ {
+  "CreatedAt": "<Any value>",
+  "Email": "email0",
+  "ID": "<Any value>",
+  "PasswordHash": "cGFzc3dvcmRoYXNoMA==",
+  "PasswordSalt": "passwordsalt0",
+  "UpdatedAt": "<Any value>",
+  "Username": "username0"
+ }
+]
+---
+
+[TestInsertUser/email_taken - 1]
+[
+ {
+  "CreatedAt": "<Any value>",
+  "Email": "email0",
+  "ID": "<Any value>",
+  "PasswordHash": "cGFzc3dvcmRoYXNoMA==",
+  "PasswordSalt": "passwordsalt0",
+  "UpdatedAt": "<Any value>",
+  "Username": "username0"
+ }
+]
+---

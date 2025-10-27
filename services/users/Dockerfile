@@ -11,6 +11,19 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 # =====
 
+FROM golang:1.25.1-alpine AS test
+
+WORKDIR /app
+
+COPY go.* .
+RUN go mod download
+
+COPY . .
+
+ENTRYPOINT go test ./... -v
+
+# =====
+
 FROM scratch
 
 COPY --from=build /app/app .

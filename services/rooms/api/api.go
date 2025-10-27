@@ -16,7 +16,7 @@ import (
 	"rooms/domain"
 )
 
-type api struct {
+type Api struct {
 	server   *http.Server
 	router   *mux.Router
 	upgrader *websocket.Upgrader
@@ -27,10 +27,10 @@ type api struct {
 	wsCloseTimeout time.Duration
 }
 
-func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *api {
+func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service) *Api {
 
 	// Create an api.
-	a := &api{
+	a := &Api{
 		service: svc,
 		router:  mux.NewRouter(),
 		logger:  l,
@@ -54,12 +54,12 @@ func NewAPI(config *configuration.Config, l *zerolog.Logger, svc domain.Service)
 	return a
 }
 
-func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *Api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.router.ServeHTTP(w, r)
 }
 
 // Start starts the api's server.
-func (a *api) Serve() error {
+func (a *Api) Serve() error {
 
 	// Create a listener.
 	ln, err := net.Listen("tcp", a.server.Addr)
@@ -73,6 +73,6 @@ func (a *api) Serve() error {
 }
 
 // Shutdown gracefully shuts down the api's server.
-func (a *api) Shutdown(ctx context.Context) error {
+func (a *Api) Shutdown(ctx context.Context) error {
 	return a.server.Shutdown(ctx)
 }

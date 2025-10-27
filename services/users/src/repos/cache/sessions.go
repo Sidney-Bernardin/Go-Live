@@ -7,38 +7,43 @@ import (
 	"users/src/domain"
 	"users/src/domain/service"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 )
 
-type cacheSession struct {
-	ID        domain.UUID `json:"id"`
-	UserID    domain.UUID `json:"user_id"`
-	CSRFToken string      `json:"csrf_token"`
+type repoSession struct {
+	ID uuid.UUID `json:"id"`
+
+	UserID    uuid.UUID `json:"user_id"`
+	CSRFToken string    `json:"csrf_token"`
 }
 
-func (s *cacheSession) domainify() *domain.Session {
+func (s *repoSession) domainify() *domain.Session {
 	if s == nil {
 		return nil
 	}
 
 	return &domain.Session{
-		ID:        s.ID,
-		UserID:    s.UserID,
+		ID:        domain.UUID(s.ID),
+		UserID:    domain.UUID(s.UserID),
 		CSRFToken: domain.CSRFToken(s.CSRFToken),
 	}
 }
 
-func (c *cache) InsertSession(ctx context.Context, session *domain.Session) error {
+func (repo *repository) InsertSession(ctx context.Context, session *domain.Session) error {
 	key := fmt.Sprintf("session:%s", session.ID)
-	p := c.client.TxPipeline()
+	p := repo.client.TxPipeline()
 
-	jsonSetCmd := p.JSONSet(ctx, key, ".", &cacheSession{
-		ID:        session.ID,
-		UserID:    session.UserID,
+	// Set the session.
+	jsonSetCmd := p.JSONSet(ctx, key, ".", &repoSession{
+		ID:        uuid.UUID(session.ID),
+		UserID:    uuid.UUID(session.UserID),
 		CSRFToken: string(session.CSRFToken),
 	})
-	expireCmd := p.Expire(ctx, key, c.config.SessionDuration)
+
+	// Set the session's expiry.
+	expireCmd := p.Expire(ctx, key, repo.config.SessionDuration)
 
 	if _, err := p.Exec(ctx); err != nil {
 		return errors.Wrap(err, "command executions failed")
@@ -55,10 +60,11 @@ func (c *cache) InsertSession(ctx context.Context, session *domain.Session) erro
 	return nil
 }
 
-func (c *cache) GetSession(ctx context.Context, sessionID domain.UUID) (*domain.Session, error) {
+func (repo *repository) GetSession(ctx context.Context, sessionID domain.UUID) (*domain.Session, error) {
 	key := fmt.Sprintf("session:%s", sessionID)
 
-	sessionJSON, err := c.client.JSONGet(ctx, key, ".").Result()
+	// Get the session.
+	sessionJSON, err := repo.client.JSONGet(ctx, key, ".").Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, service.ErrSessionNotFound
@@ -67,7 +73,8 @@ func (c *cache) GetSession(ctx context.Context, sessionID domain.UUID) (*domain.
 		return nil, errors.Wrap(err, "cannot get")
 	}
 
-	var session cacheSession
+	// Decode the session.
+	var session repoSession
 	if err := json.Unmarshal([]byte(sessionJSON), &session); err != nil {
 		return nil, errors.Wrap(err, "cannot decode")
 	}

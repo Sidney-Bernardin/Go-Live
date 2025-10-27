@@ -1,0 +1,35 @@
+
+[TestInsertUser/successful - 1]
+nil
+---
+
+[TestInsertUser/successful_upsert - 1]
+nil
+---
+
+[TestGetUser/successful - 1]
+nil
+---
+
+[TestGetUser/successful - 2]
+{
+ "CreatedAt": "<Any value>",
+ "Email": "email0",
+ "ID": "<Any value>",
+ "PasswordHash": null,
+ "PasswordSalt": "",
+ "UpdatedAt": "<Any value>",
+ "Username": "username0"
+}
+---
+
+[TestGetUser/not_found - 1]
+&errors.fundamental{
+    msg:   "user not found",
+    stack: &errors.stack{0x5f48c1, 0x450b38, 0x441fe5, 0x441ece, 0x47e521},
+}
+---
+
+[TestGetUser/not_found - 2]
+null
+---

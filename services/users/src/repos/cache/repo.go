@@ -9,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type cache struct {
+type repository struct {
 	config *src.Config
 
 	client *redis.Client
@@ -17,13 +17,15 @@ type cache struct {
 
 func New(ctx context.Context, config *src.Config) (service.CacheRepository, error) {
 
+	// Create a Redis client.
 	client := redis.NewClient(&redis.Options{
 		Addr: config.RedisAddr,
 	})
 
+	// Test connection with a ping.
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, errors.Wrap(err, "ping failed")
 	}
 
-	return &cache{config, client}, nil
+	return &repository{config, client}, nil
 }

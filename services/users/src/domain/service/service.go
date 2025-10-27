@@ -16,18 +16,20 @@ var (
 	ErrEmailTaken    = errors.New("email taken")
 )
 
-type DatabaseRepository interface {
-	InsertUser(context.Context, *domain.User) error
-	GetUserByID(context.Context, domain.UUID) (*domain.User, error)
-}
+type (
+	DatabaseRepository interface {
+		InsertUser(context.Context, *domain.User) error
+		GetUserByID(context.Context, domain.UUID) (*domain.User, error)
+	}
 
-type CacheRepository interface {
-	InsertUser(context.Context, *domain.User) error
-	GetUser(context.Context, domain.UUID) (*domain.User, error)
+	CacheRepository interface {
+		InsertUser(context.Context, *domain.User) error
+		GetUser(context.Context, domain.UUID) (*domain.User, error)
 
-	InsertSession(context.Context, *domain.Session) error
-	GetSession(context.Context, domain.UUID) (*domain.Session, error)
-}
+		InsertSession(context.Context, *domain.Session) error
+		GetSession(context.Context, domain.UUID) (*domain.Session, error)
+	}
+)
 
 type Service struct {
 	config *src.Config

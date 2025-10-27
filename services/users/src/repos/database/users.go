@@ -2,16 +2,20 @@ package database
 
 import (
 	"context"
+	"time"
 	"users/src/domain"
 	"users/src/domain/service"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
 )
 
-type dbUser struct {
-	ID domain.UUID `db:"id"`
+type repoUser struct {
+	ID        uuid.UUID `db:"id"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 
 	Username     string `db:"username"`
 	Email        string `db:"email"`
@@ -19,13 +23,15 @@ type dbUser struct {
 	PasswordSalt string `db:"password_salt"`
 }
 
-func (u *dbUser) domainify() *domain.User {
+func (u *repoUser) domainify() *domain.User {
 	if u == nil {
 		return nil
 	}
 
 	return &domain.User{
-		ID:           u.ID,
+		ID:           domain.UUID(u.ID),
+		CreatedAt:    u.CreatedAt,
+		UpdatedAt:    u.UpdatedAt,
 		Username:     domain.Username(u.Username),
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
@@ -38,7 +44,7 @@ const qInsertUser = `
 	VALUES ($1, $2, $3, $4, $5)
 `
 
-func (repo *databaseRepository) InsertUser(ctx context.Context, user *domain.User) error {
+func (repo *repository) InsertUser(ctx context.Context, user *domain.User) error {
 	_, err := repo.pool.Exec(ctx, qInsertUser,
 		user.ID,
 		user.Username,
@@ -46,45 +52,39 @@ func (repo *databaseRepository) InsertUser(ctx context.Context, user *domain.Use
 		user.PasswordHash,
 		user.PasswordSalt)
 
-	if err != nil {
-		var pgErr *pgconn.PgError
+	if pgErr := new(pgconn.PgError); errors.As(err, &pgErr) {
+		switch pgErr.ConstraintName {
+		case "users_username_key":
+			switch pgErr.Code {
+			case "23505":
+				return service.ErrUsernameTaken
+			}
 
-		switch {
-		case errors.As(err, &pgErr):
-
-			switch pgErr.ConstraintName {
-			case "users_username_key":
-				switch pgErr.Code {
-				case "23505":
-					return service.ErrUsernameTaken
-				}
-
-			case "users_email_key":
-				switch pgErr.Code {
-				case "23505":
-					return service.ErrEmailTaken
-				}
+		case "users_email_key":
+			switch pgErr.Code {
+			case "23505":
+				return service.ErrEmailTaken
 			}
 		}
-
-		return errors.WithStack(err)
 	}
 
-	return nil
+	return errors.WithStack(err)
 }
 
 const qGetUserByID = `
 	SELECT * FROM users WHERE id = $1
 `
 
-func (repo *databaseRepository) GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error) {
+func (repo *repository) GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error) {
 
-	rows, err := repo.pool.Query(ctx, qGetUserByID, userID)
+	// Get the user with a matching user-ID.
+	userRows, err := repo.pool.Query(ctx, qGetUserByID, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed selecting")
 	}
 
-	user, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[dbUser])
+	// Decode the user.
+	user, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByName[repoUser])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, service.ErrUserNotFound

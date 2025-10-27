@@ -2,7 +2,7 @@ package http
 
 import "github.com/go-chi/chi/v5"
 
-func (api *Api) routes() {
+func (api *API) routes() {
 	r := chi.NewRouter()
 	api.server.Handler = r
 

@@ -12,11 +12,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (a *api) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (a *Api) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("index"))
 }
 
-func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
+func (a *Api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Create a Room for the Session-ID's User.
 	err := a.service.CreateRoom(r.Context(), r.FormValue("key"), r.FormValue("name"))
@@ -29,7 +29,7 @@ func (a *api) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
+func (a *Api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the Room of the Session-ID's User.
 	if err := a.service.DeleteRoom(r.Context(), r.FormValue("key")); err != nil {
@@ -41,7 +41,7 @@ func (a *api) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
+func (a *Api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Get the Room-ID's Room.
 	room, err := a.service.GetRoom(r.Context(), mux.Vars(r)["room_id"])
@@ -58,7 +58,7 @@ func (a *api) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
+func (a *Api) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Get the room and session IDs from the request's URL.
 	urlVals := r.URL.Query()

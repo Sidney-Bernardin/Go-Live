@@ -1,6 +1,6 @@
 package api
 
-func (a *api) doRoutes() {
+func (a *Api) doRoutes() {
 
 	a.router.Use(a.logRequest)
 	a.router.HandleFunc("/", a.handleIndex)

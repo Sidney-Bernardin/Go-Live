@@ -1,0 +1,52 @@
+
+[TestInsertUser/successful - 1]
+nil
+---
+
+[TestInsertUser/successful - 2]
+{
+ "created_at": "0001-01-01T00:00:00Z",
+ "email": "",
+ "id": "00000000-0000-0000-0000-000000000000",
+ "updated_at": "0001-01-01T00:00:00Z",
+ "username": ""
+}
+---
+
+[TestInsertUser/successful_upsert - 1]
+nil
+---
+
+[TestInsertUser/successful_upsert - 2]
+{
+ "created_at": "0001-01-01T00:00:00Z",
+ "email": "",
+ "id": "<Any value>",
+ "updated_at": "0001-01-01T00:00:00Z",
+ "username": ""
+}
+---
+
+[TestInsertSession/successful - 1]
+nil
+---
+
+[TestInsertSession/successful - 2]
+{
+ "csrf_token": "",
+ "id": "00000000-0000-0000-0000-000000000000",
+ "user_id": "00000000-0000-0000-0000-000000000000"
+}
+---
+
+[TestInsertSession/successful_upsert - 1]
+nil
+---
+
+[TestInsertSession/successful_upsert - 2]
+{
+ "csrf_token": "",
+ "id": "<Any value>",
+ "user_id": "00000000-0000-0000-0000-000000000000"
+}
+---

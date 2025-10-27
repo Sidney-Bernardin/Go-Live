@@ -26,7 +26,7 @@ const (
 
 type DomainError struct {
 	Type    DomainErrorType
-	Message string
+	Msg     string
 	Details map[string]any
 }
 
@@ -36,23 +36,33 @@ func NewDomainError(ctx context.Context, t DomainErrorType, msg string) *DomainE
 }
 
 func (e *DomainError) Error() string {
-	return fmt.Sprintf(`%s: %s`, e.Type, e.Message)
+	return fmt.Sprintf(`%s: %s`, e.Type, e.Msg)
 }
 
-type UUID struct {
-	googleUUID.UUID
-}
+type UUID googleUUID.UUID
 
 func NewUUID() UUID {
-	return UUID{googleUUID.New()}
+	return UUID(googleUUID.New())
 }
 
-func NewUUIDFromString(ctx context.Context, str string) (UUID, error) {
+func ParseUUID(ctx context.Context, str string) (UUID, error) {
 	uuid, err := googleUUID.Parse(str)
 	if err != nil {
 		return UUID{}, NewDomainError(ctx, DomainErrorTypeUUIDInvalid, err.Error())
 	}
-	return UUID{uuid}, nil
+	return UUID(uuid), nil
+}
+
+func MustParseUUID(str string) UUID {
+	uuid, err := ParseUUID(context.Background(), str)
+	if err != nil {
+		panic(err)
+	}
+	return uuid
+}
+
+func (uuid UUID) String() string {
+	return googleUUID.UUID(uuid).String()
 }
 
 func MustRandomString(length int) string {

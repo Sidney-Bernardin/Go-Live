@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 	"users/src/domain"
@@ -9,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (api *Api) newSessionCookie(session *domain.Session) *http.Cookie {
+func (api *API) newSessionCookie(session *domain.Session) *http.Cookie {
 	return &http.Cookie{
 		Name:     "SESSION_ID",
 		Value:    session.ID.String(),
@@ -21,17 +20,16 @@ func (api *Api) newSessionCookie(session *domain.Session) *http.Cookie {
 	}
 }
 
-func (api *Api) handleSignup(w http.ResponseWriter, r *http.Request) {
-
-	var signupForm *domain.SignupForm
-	if err := json.NewDecoder(r.Body).Decode(&signupForm); err != nil {
-		api.err(w, r, errors.Wrap(err, "failed decoding signup-form"))
-		return
+func (api *API) handleSignup(w http.ResponseWriter, r *http.Request) {
+	signupForm := &domain.SignupForm{
+		Username: r.FormValue("username"),
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
 	}
 
 	session, err := api.svc.Signup(r.Context(), signupForm)
 	if err != nil {
-		api.err(w, r, errors.Wrap(err, "failed signing up"))
+		api.err(w, r, http.StatusInternalServerError, errors.Wrap(err, "failed signing up"))
 		return
 	}
 

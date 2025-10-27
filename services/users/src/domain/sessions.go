@@ -1,7 +1,8 @@
 package domain
 
 type Session struct {
-	ID        UUID
+	ID UUID
+
 	UserID    UUID
 	CSRFToken CSRFToken
 }
