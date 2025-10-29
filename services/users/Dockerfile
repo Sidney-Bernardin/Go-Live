@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -o app .
+    go build -o app ./cmd/run/main.go
 
 # =====
 

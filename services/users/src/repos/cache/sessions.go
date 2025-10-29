@@ -46,15 +46,15 @@ func (repo *repository) InsertSession(ctx context.Context, session *domain.Sessi
 	expireCmd := p.Expire(ctx, key, repo.config.SessionDuration)
 
 	if _, err := p.Exec(ctx); err != nil {
-		return errors.Wrap(err, "command executions failed")
+		return errors.Wrap(err, "failed command executions")
 	}
 
 	if err := jsonSetCmd.Err(); err != nil {
-		return errors.Wrap(err, "cannot set json")
+		return errors.Wrap(err, "failed setting json")
 	}
 
 	if err := expireCmd.Err(); err != nil {
-		return errors.Wrap(err, "cannot set expiry")
+		return errors.Wrap(err, "failed setting expiry")
 	}
 
 	return nil
@@ -70,13 +70,13 @@ func (repo *repository) GetSession(ctx context.Context, sessionID domain.UUID) (
 			return nil, service.ErrSessionNotFound
 		}
 
-		return nil, errors.Wrap(err, "cannot get")
+		return nil, errors.Wrap(err, "failed getting")
 	}
 
 	// Decode the session.
 	var session repoSession
 	if err := json.Unmarshal([]byte(sessionJSON), &session); err != nil {
-		return nil, errors.Wrap(err, "cannot decode")
+		return nil, errors.Wrap(err, "failed decoding")
 	}
 
 	return session.domainify(), nil

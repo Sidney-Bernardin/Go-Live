@@ -1,21 +1,16 @@
 package http
 
 import (
-	"context"
+	"log/slog"
 	"net/http"
-	"users/src/domain"
 )
-
-func (api *API) mwInitDetails(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		*r = *r.WithContext(context.WithValue(r.Context(), domain.DomainErrorDetailsKey, map[string]any{}))
-		next.ServeHTTP(w, r)
-	})
-}
 
 func (api *API) mwLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		api.logger.Info("New Request", api.requestAttr(r))
+		api.logger.Info("New request", slog.Group("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+		))
 		next.ServeHTTP(w, r)
 	})
 }

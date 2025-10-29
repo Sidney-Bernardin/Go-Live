@@ -52,7 +52,7 @@ func (repo *repository) InsertUser(ctx context.Context, user *domain.User) error
 		user.PasswordHash,
 		user.PasswordSalt)
 
-	if pgErr := new(pgconn.PgError); errors.As(err, &pgErr) {
+	if pgErr := (&pgconn.PgError{}); errors.As(err, &pgErr) {
 		switch pgErr.ConstraintName {
 		case "users_username_key":
 			switch pgErr.Code {
@@ -68,7 +68,7 @@ func (repo *repository) InsertUser(ctx context.Context, user *domain.User) error
 		}
 	}
 
-	return errors.WithStack(err)
+	return errors.Wrap(err, "failed inserting")
 }
 
 const qGetUserByID = `

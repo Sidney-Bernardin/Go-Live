@@ -8,6 +8,9 @@ import (
 )
 
 type Config struct {
+	LogPretty      bool `split_words:"true" default:"true"`
+	LogPrettyColor bool `split_words:"true" default:"true"`
+
 	HttpAddr                string `split_words:"true" required:"true"`
 	HttpSessionCookieDomain string `split_words:"true" required:"true"`
 

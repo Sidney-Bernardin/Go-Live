@@ -14,18 +14,21 @@ type SignupForm struct {
 
 func (signupForm *SignupForm) NewUser(ctx context.Context) (*User, error) {
 
-	username, err := NewUsername(ctx, signupForm.Username)
+	// Create username.
+	username, err := NewUsername(signupForm.Username)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating username")
 	}
 
-	password, err := NewPassword(ctx, signupForm.Password)
+	// Create Password.
+	password, err := NewPassword(signupForm.Password)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating password")
 	}
 
+	// Create hash the Password.
 	passwordSalt := NewPasswordSalt()
-	passwordHash, err := NewPasswordHash(ctx, password, passwordSalt)
+	passwordHash, err := NewPasswordHash(password, passwordSalt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating passwaord-hash")
 	}

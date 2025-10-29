@@ -12,28 +12,28 @@ func TestNewUsername(t *testing.T) {
 	t.Parallel()
 
 	t.Run("work", func(t *testing.T) {
-		inUsername := "foobarbaz"
-		outUsername, err := NewUsername(t.Context(), inUsername)
+		u := "foobarbaz"
 
-		assert.Equal(t, inUsername, string(outUsername))
+		username, err := NewUsername(u)
+		assert.Equal(t, u, string(username))
 		assert.NoError(t, err)
 	})
 
 	t.Run("too_short", func(t *testing.T) {
-		inUsername := ""
-		outUsername, err := NewUsername(t.Context(), inUsername)
+		u := ""
 
-		assert.Equal(t, "", string(outUsername))
+		username, err := NewUsername(u)
+		assert.Equal(t, "", string(username))
 		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
 			assert.Equal(t, DomainErrorTypeUsernameInvalid, domainErr.Type)
 		}
 	})
 
 	t.Run("too_long", func(t *testing.T) {
-		inUsername := MustRandomString(34)
-		outUsername, err := NewUsername(t.Context(), inUsername)
+		u := string(make([]byte, 34))
 
-		assert.Equal(t, "", string(outUsername))
+		username, err := NewUsername(u)
+		assert.Equal(t, "", string(username))
 		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
 			assert.Equal(t, DomainErrorTypeUsernameInvalid, domainErr.Type)
 		}
@@ -44,28 +44,28 @@ func TestNewPassword(t *testing.T) {
 	t.Parallel()
 
 	t.Run("work", func(t *testing.T) {
-		inPassword := "foobarbaz"
-		outPassword, err := NewPassword(t.Context(), inPassword)
+		pw := "foobarbaz"
 
-		assert.Equal(t, inPassword, string(outPassword))
+		password, err := NewPassword(pw)
+		assert.Equal(t, pw, string(password))
 		assert.NoError(t, err)
 	})
 
 	t.Run("too_short", func(t *testing.T) {
-		inPassword := ""
-		outPassword, err := NewPassword(t.Context(), inPassword)
+		pw := ""
 
-		assert.Equal(t, "", string(outPassword))
+		password, err := NewPassword(pw)
+		assert.Equal(t, "", string(password))
 		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
 			assert.Equal(t, DomainErrorTypePasswordInvalid, domainErr.Type)
 		}
 	})
 
 	t.Run("too_long", func(t *testing.T) {
-		inPassword := MustRandomString(102)
-		outPassword, err := NewPassword(t.Context(), inPassword)
+		pw := string(make([]byte, 102))
 
-		assert.Equal(t, "", string(outPassword))
+		password, err := NewPassword(pw)
+		assert.Equal(t, "", string(password))
 		if domainErr := (&DomainError{}); assert.ErrorAs(t, err, &domainErr) {
 			assert.Equal(t, DomainErrorTypePasswordInvalid, domainErr.Type)
 		}
@@ -75,7 +75,7 @@ func TestNewPassword(t *testing.T) {
 func TestNewPasswordSalt(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Length", func(t *testing.T) {
+	t.Run("length", func(t *testing.T) {
 		assert.Equal(t, len(NewPasswordSalt()), 32)
 	})
 }
@@ -83,22 +83,13 @@ func TestNewPasswordSalt(t *testing.T) {
 func TestNewPasswordHash(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Bcrypt Comparison", func(t *testing.T) {
-		ctx := t.Context()
-
-		// Create password.
-		password, err := NewPassword(ctx, "foobarbaz")
+	t.Run("bcrypt_comparison", func(t *testing.T) {
+		password, err := NewPassword("foobarbaz")
 		require.NoError(t, err)
 
-		// Create password-salt.
 		passwordSalt := NewPasswordSalt()
-
-		// Create password-hash.
-		passwordHash, err := NewPasswordHash(ctx, password, passwordSalt)
+		passwordHash, err := NewPasswordHash(password, passwordSalt)
 		require.NoError(t, err)
-
-		// Assert bcrypt comparison.
-		err = bcrypt.CompareHashAndPassword(passwordHash, []byte(string(password)+string(passwordSalt)))
-		assert.NoError(t, err)
+		require.NoError(t, bcrypt.CompareHashAndPassword(passwordHash, []byte(string(password)+string(passwordSalt))))
 	})
 }

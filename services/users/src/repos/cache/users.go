@@ -46,7 +46,7 @@ func (repo *repository) InsertUser(ctx context.Context, user *domain.User) error
 		Email:     user.Email,
 	}).Err()
 
-	return errors.WithStack(err)
+	return errors.Wrap(err, "failed setting")
 }
 
 func (repo *repository) GetUser(ctx context.Context, userID domain.UUID) (*domain.User, error) {
@@ -59,13 +59,13 @@ func (repo *repository) GetUser(ctx context.Context, userID domain.UUID) (*domai
 			return nil, service.ErrUserNotFound
 		}
 
-		return nil, errors.Wrap(err, "cannot get")
+		return nil, errors.Wrap(err, "failed getting")
 	}
 
 	// Decode the user.
 	var user repoUser
 	if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
-		return nil, errors.Wrap(err, "cannot decode")
+		return nil, errors.Wrap(err, "failed decoding")
 	}
 
 	return user.domainify(), nil

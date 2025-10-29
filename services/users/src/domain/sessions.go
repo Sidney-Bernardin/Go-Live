@@ -1,5 +1,7 @@
 package domain
 
+import "users/src"
+
 type Session struct {
 	ID UUID
 
@@ -18,5 +20,5 @@ func NewSession(userID UUID) *Session {
 type CSRFToken string
 
 func NewCSRFToken() CSRFToken {
-	return CSRFToken(MustRandomString(32))
+	return CSRFToken(src.MustRandomString(32))
 }

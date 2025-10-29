@@ -6,7 +6,7 @@ func (api *API) routes() {
 	r := chi.NewRouter()
 	api.server.Handler = r
 
-	r.Use(api.mwLog, api.mwInitDetails)
+	r.Use(api.mwLog)
 
 	r.Route("/login", func(r chi.Router) {
 		r.Post("/signup", api.handleSignup)

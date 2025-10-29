@@ -17,7 +17,10 @@ func (svc *Service) GetUserByID(ctx context.Context, userID domain.UUID) (*domai
 	user, err = svc.databaseRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			return nil, domain.NewDomainError(ctx, domain.DomainErrorTypeUserDoesNotExist, "User doesn't exist.")
+			return nil, &domain.DomainError{
+				Type:    domain.DomainErrorTypeUserDoesNotExist,
+				Message: "User doesn't exist.",
+			}
 		}
 
 		return nil, errors.Wrap(err, "failed getting user from database")

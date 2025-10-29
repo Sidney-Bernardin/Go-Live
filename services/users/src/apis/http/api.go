@@ -1,9 +1,11 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 	"users/src"
 	"users/src/domain"
 	"users/src/domain/service"
@@ -30,58 +32,44 @@ func New(config *src.Config, logger *slog.Logger, svc *service.Service) *API {
 	return api
 }
 
-func Run() {
-
+func (api *API) Run() {
+	api.logger.Info("Running...", "addr", api.config.HttpAddr)
+	err := api.server.ListenAndServe()
+	api.logger.Error("Failed running server", src.ErrGroup(err))
 }
 
-var domainErrorCodes = map[domain.DomainErrorType]int{
-	domain.DomainErrorTypeUserDoesNotExist:    http.StatusNotFound,
-	domain.DomainErrorTypeSessionDoesNotExist: http.StatusNotFound,
-
-	domain.DomainErrorTypeUUIDInvalid:     http.StatusBadRequest,
-	domain.DomainErrorTypeUsernameInvalid: http.StatusBadRequest,
-	domain.DomainErrorTypePasswordInvalid: http.StatusBadRequest,
-}
-
-func (api *API) err(w http.ResponseWriter, r *http.Request, statusCode int, err error) {
-
-	var view struct {
-		Type    string         `json:"type,omitempty"`
-		Msg     string         `json:"message,omitempty"`
-		Details map[string]any `json:"details,omitempty"`
-	}
-
-	if domainErr := new(domain.DomainError); errors.As(err, &domainErr) {
-		statusCode = domainErrorCodes[domainErr.Type]
-		view.Type = string(domainErr.Type)
-		view.Msg = domainErr.Msg
-		view.Details = domainErr.Details
-	} else if statusCode >= 500 {
-		view.Msg = http.StatusText(statusCode)
-		api.logger.LogAttrs(r.Context(), slog.LevelError, view.Msg,
-			slog.Group("error", "msg", err.Error()),
-			api.requestAttr(r))
-	} else {
-		view.Msg = err.Error()
-	}
-
-	api.write(w, statusCode, view)
+func (api *API) Shutdown() {
+	api.logger.Info("Shutting down...", "addr", api.config.HttpAddr)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := api.server.Shutdown(ctx)
+	api.logger.Error("Failed shutting down server", src.ErrGroup(err))
 }
 
 func (api *API) write(w http.ResponseWriter, statusCode int, data any) {
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		api.logger.Error("Internal Server Error", "err", err.Error())
+		api.logger.Error("Failed writting response", src.ErrGroup(err))
 	}
 }
 
-func (api *API) requestAttr(r *http.Request) slog.Attr {
-	return slog.Group("request",
-		"method", r.Method,
-		"path", r.URL.Path,
-	)
-}
+func (api *API) err(w http.ResponseWriter, e error) {
+	switch e := errors.Cause(e).(type) {
+	case *apiError[apiErrorType]:
+		api.write(w, apiCodes[e.Type], e)
 
-func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	api.server.Handler.ServeHTTP(w, r)
+	case *domain.DomainError:
+		api.write(w, domainCodes[e.Type], &apiError[domain.DomainErrorType]{
+			Type:    e.Type,
+			Message: e.Message,
+			Details: e.Details,
+		})
+
+	default:
+		api.logger.Error("Internal server error", src.ErrGroup(e))
+		api.write(w, apiCodes[apiErrorTypeInternalServerError], &apiError[apiErrorType]{
+			Type:    apiErrorTypeInternalServerError,
+			Message: "Internal Server Error",
+		})
+	}
 }

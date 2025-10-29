@@ -29,7 +29,7 @@ func (api *API) handleSignup(w http.ResponseWriter, r *http.Request) {
 
 	session, err := api.svc.Signup(r.Context(), signupForm)
 	if err != nil {
-		api.err(w, r, http.StatusInternalServerError, errors.Wrap(err, "failed signing up"))
+		api.err(w, errors.Wrap(err, "failed signing up"))
 		return
 	}
 

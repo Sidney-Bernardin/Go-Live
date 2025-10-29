@@ -1,8 +1,8 @@
 package domain
 
 import (
-	"context"
 	"time"
+	"users/src"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -21,34 +21,39 @@ type User struct {
 
 type Username string
 
-func NewUsername(ctx context.Context, uname string) (Username, error) {
-	if len(uname) < 3 || 32 < len(uname) {
-		return "", NewDomainError(ctx, DomainErrorTypeUsernameInvalid, "Username must be between 3 and 32 characters.")
+func NewUsername(u string) (Username, error) {
+	if len(u) < 3 || 32 < len(u) {
+		return "", &DomainError{DomainErrorTypeUsernameInvalid, "Username must be between 3 and 32 characters.", map[string]any{
+			"username": u,
+		}}
 	}
-	return Username(uname), nil
+	return Username(u), nil
 }
 
 type Password string
 
-func NewPassword(ctx context.Context, passw string) (Password, error) {
-	if len(passw) < 8 || 100 < len(passw) {
-		return "", NewDomainError(ctx, DomainErrorTypePasswordInvalid, "Password must be between 8 and 100 characters.")
+func NewPassword(pw string) (Password, error) {
+	if len(pw) < 8 || 100 < len(pw) {
+		return "", &DomainError{DomainErrorTypePasswordInvalid, "Password must be between 8 and 100 characters.", map[string]any{
+			"password": pw,
+		}}
 	}
-	return Password(passw), nil
+	return Password(pw), nil
 }
 
 type PasswordSalt string
 
 func NewPasswordSalt() PasswordSalt {
-	return PasswordSalt(MustRandomString(32))
+	return PasswordSalt(src.MustRandomString(32))
 }
 
 type PasswordHash []byte
 
-func NewPasswordHash(ctx context.Context, password Password, passwordSalt PasswordSalt) (PasswordHash, error) {
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(string(password)+string(passwordSalt)), 12)
+func NewPasswordHash(pw Password, pwSalt PasswordSalt) (PasswordHash, error) {
+	pwHash := []byte(string(pw) + string(pwSalt))
+	pwHash, err := bcrypt.GenerateFromPassword(pwHash, 12)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed hashing passwaord")
 	}
-	return PasswordHash(passwordHash), nil
+	return PasswordHash(pwHash), nil
 }

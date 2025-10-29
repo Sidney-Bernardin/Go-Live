@@ -9,7 +9,7 @@ import (
 func TestNewCSRFToken(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Length", func(t *testing.T) {
+	t.Run("length", func(t *testing.T) {
 		assert.Equal(t, len(NewPasswordSalt()), 32)
 	})
 }
