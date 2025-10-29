@@ -27,7 +27,7 @@ func (api *API) handleSignup(w http.ResponseWriter, r *http.Request) {
 		Password: r.FormValue("password"),
 	}
 
-	session, err := api.svc.Signup(r.Context(), signupForm)
+	session, err := api.service.Signup(r.Context(), signupForm)
 	if err != nil {
 		api.err(w, errors.Wrap(err, "failed signing up"))
 		return

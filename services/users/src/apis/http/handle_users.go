@@ -9,8 +9,7 @@ import (
 )
 
 type userView struct {
-	ID string `json:"id"`
-
+	ID       string `json:"id,omitempty"`
 	Username string `json:"username,omitempty"`
 	Email    string `json:"email,omitempty"`
 }
@@ -36,7 +35,7 @@ func (api *API) handleGetUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		user, err := api.svc.GetUserByID(ctx, userID)
+		user, err := api.service.GetUserByID(ctx, userID)
 		if err != nil {
 			api.err(w, errors.Wrap(err, "failed getting user"))
 			return
@@ -52,7 +51,7 @@ func (api *API) handleGetUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		users, err := api.svc.SearchUsers(ctx, username)
+		users, err := api.service.SearchUsers(ctx, username)
 		if err != nil {
 			api.err(w, errors.Wrap(err, "failed getting users"))
 			return

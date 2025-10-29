@@ -3,9 +3,11 @@ package cache
 import (
 	"testing"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/gkampitakis/go-snaps/match"
 	"github.com/gkampitakis/go-snaps/snaps"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInsertSession(t *testing.T) {
@@ -17,7 +19,7 @@ func TestInsertSession(t *testing.T) {
 		session := &domain.Session{}
 
 		err := repo.InsertSession(t.Context(), session)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		repo.matchSessionSnapshot(t, session.ID)
 	})
 
@@ -28,7 +30,7 @@ func TestInsertSession(t *testing.T) {
 		}
 
 		err := repo.InsertSession(t.Context(), session)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		repo.matchSessionSnapshot(t, session.ID, match.Any("id"))
 	})
 }
@@ -41,7 +43,7 @@ func TestGetSession(t *testing.T) {
 		_, sessions := repo.suite(t, 1, 1)
 
 		session, err := repo.GetSession(t.Context(), sessions[0].ID)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		snaps.MatchJSON(t, session, match.Any("ID", "UserID", "CSRFToken"))
 	})
 
@@ -49,7 +51,7 @@ func TestGetSession(t *testing.T) {
 		_, _ = repo.suite(t, 1, 1)
 
 		session, err := repo.GetSession(t.Context(), domain.NewUUID())
-		snaps.MatchSnapshot(t, err)
+		assert.ErrorIs(t, err, service.ErrSessionNotFound)
 		snaps.MatchJSON(t, session)
 	})
 }

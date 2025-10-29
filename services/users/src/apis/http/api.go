@@ -14,19 +14,19 @@ import (
 )
 
 type API struct {
-	config *src.Config
-	logger *slog.Logger
-	svc    *service.Service
+	config  *src.Config
+	logger  *slog.Logger
+	service *service.Service
 
 	server *http.Server
 }
 
 func New(config *src.Config, logger *slog.Logger, svc *service.Service) *API {
-	server := &http.Server{
+	svr := &http.Server{
 		Addr: config.HttpAddr,
 	}
 
-	api := &API{config, logger, svc, server}
+	api := &API{config, logger, svc, svr}
 	api.routes()
 
 	return api
@@ -39,9 +39,10 @@ func (api *API) Run() {
 }
 
 func (api *API) Shutdown() {
-	api.logger.Info("Shutting down...", "addr", api.config.HttpAddr)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	api.logger.Info("Shutting down...", "addr", api.config.HttpAddr)
 	err := api.server.Shutdown(ctx)
 	api.logger.Error("Failed shutting down server", src.ErrGroup(err))
 }
@@ -55,6 +56,7 @@ func (api *API) write(w http.ResponseWriter, statusCode int, data any) {
 
 func (api *API) err(w http.ResponseWriter, e error) {
 	switch e := errors.Cause(e).(type) {
+
 	case *apiError[apiErrorType]:
 		api.write(w, apiCodes[e.Type], e)
 

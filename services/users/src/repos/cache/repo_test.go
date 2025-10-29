@@ -44,7 +44,7 @@ func (repo *repository) suite(t *testing.T, users, sessions int) ([]*domain.User
 
 	var dummyUsers []*domain.User
 	for i := range users {
-		u := repoUser{
+		u := userRecord{
 			ID:       uuid.New(),
 			Username: fmt.Sprintf("username%v", i),
 			Email:    fmt.Sprintf("email%v", i),
@@ -53,7 +53,7 @@ func (repo *repository) suite(t *testing.T, users, sessions int) ([]*domain.User
 		err = repo.client.JSONSet(ctx, fmt.Sprintf("user:%s", u.ID), ".", u).Err()
 		require.NoError(t, err)
 
-		dummyUsers = append(dummyUsers, u.domainify())
+		dummyUsers = append(dummyUsers, u.user())
 	}
 
 	var dummySessions []*domain.Session

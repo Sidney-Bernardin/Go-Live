@@ -14,11 +14,24 @@ func (svc *Service) Signup(ctx context.Context, signupForm *domain.SignupForm) (
 		return nil, errors.Wrap(err, "failed creating user from signup-form")
 	}
 
-	if err = svc.databaseRepo.InsertUser(ctx, user); err != nil {
+	if err = svc.database.InsertUser(ctx, user); err != nil {
 		if errors.Is(err, ErrUsernameTaken) {
 			return nil, &domain.DomainError{
 				Type:    domain.DomainErrorTypeUsernameInvalid,
 				Message: "Username already in use.",
+				Details: map[string]any{
+					"username": user.Username,
+				},
+			}
+		}
+
+		if errors.Is(err, ErrEmailTaken) {
+			return nil, &domain.DomainError{
+				Type:    domain.DomainErrorTypeEmailInvalid,
+				Message: "Email already in use.",
+				Details: map[string]any{
+					"email": user.Email,
+				},
 			}
 		}
 
@@ -27,7 +40,7 @@ func (svc *Service) Signup(ctx context.Context, signupForm *domain.SignupForm) (
 
 	session := domain.NewSession(user.ID)
 
-	if err = svc.cacheRepo.InsertSession(ctx, session); err != nil {
+	if err = svc.cache.InsertSession(ctx, session); err != nil {
 		return nil, errors.Wrap(err, "failed inserting session into cache")
 	}
 

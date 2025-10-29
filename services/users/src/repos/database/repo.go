@@ -14,32 +14,29 @@ import (
 )
 
 //go:embed Migrations
-var migrations embed.FS
+var migrationsDir embed.FS
 
 type repository struct {
 	pool *pgxpool.Pool
 }
 
 func New(ctx context.Context, config *src.Config) (service.DatabaseRepository, error) {
-
-	// Create a Postgres connection pool.
 	pool, err := pgxpool.New(ctx, config.PostgresUrl)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating connection pool")
 	}
 
-	// Migrate the database.
-	if err := doMigrations(config); err != nil {
+	if err := migrations(config); err != nil {
 		return nil, errors.Wrap(err, "failed migrations")
 	}
 
 	return &repository{pool}, nil
 }
 
-func doMigrations(config *src.Config) error {
+func migrations(config *src.Config) error {
 
 	// Create migration source with the Migrations directory.
-	source, err := iofs.New(migrations, "Migrations")
+	source, err := iofs.New(migrationsDir, "Migrations")
 	if err != nil {
 		return errors.Wrap(err, "failed creating migration source")
 	}

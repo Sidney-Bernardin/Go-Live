@@ -8,13 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	ErrUserNotFound    = errors.New("user not found")
-	ErrSessionNotFound = errors.New("session not found")
+type Service struct {
+	config *src.Config
 
-	ErrUsernameTaken = errors.New("username taken")
-	ErrEmailTaken    = errors.New("email taken")
-)
+	database DatabaseRepository
+	cache    CacheRepository
+}
 
 type (
 	DatabaseRepository interface {
@@ -31,21 +30,22 @@ type (
 	}
 )
 
-type Service struct {
-	config *src.Config
+var (
+	ErrUserNotFound    = errors.New("user not found")
+	ErrSessionNotFound = errors.New("session not found")
 
-	databaseRepo DatabaseRepository
-	cacheRepo    CacheRepository
-}
+	ErrUsernameTaken = errors.New("username taken")
+	ErrEmailTaken    = errors.New("email taken")
+)
 
 func New(
 	config *src.Config,
-	databaseRepo DatabaseRepository,
-	cacheRepo CacheRepository,
+	database DatabaseRepository,
+	cache CacheRepository,
 ) *Service {
 	return &Service{
 		config,
-		databaseRepo,
-		cacheRepo,
+		database,
+		cache,
 	}
 }

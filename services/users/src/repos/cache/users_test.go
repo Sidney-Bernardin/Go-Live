@@ -3,9 +3,11 @@ package cache
 import (
 	"testing"
 	"users/src/domain"
+	"users/src/domain/service"
 
 	"github.com/gkampitakis/go-snaps/match"
 	"github.com/gkampitakis/go-snaps/snaps"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInsertUser(t *testing.T) {
@@ -17,7 +19,7 @@ func TestInsertUser(t *testing.T) {
 		user := &domain.User{}
 
 		err := repo.InsertUser(t.Context(), user)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		repo.matchUserSnapshot(t, user.ID)
 	})
 
@@ -28,7 +30,7 @@ func TestInsertUser(t *testing.T) {
 		}
 
 		err := repo.InsertUser(t.Context(), user)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		repo.matchUserSnapshot(t, user.ID, match.Any("id"))
 	})
 }
@@ -41,7 +43,7 @@ func TestGetUser(t *testing.T) {
 		users, _ := repo.suite(t, 1, 1)
 
 		user, err := repo.GetUser(t.Context(), users[0].ID)
-		snaps.MatchSnapshot(t, err)
+		assert.NoError(t, err)
 		snaps.MatchJSON(t, user, match.Any("ID", "CreatedAt", "UpdatedAt"))
 	})
 
@@ -49,7 +51,7 @@ func TestGetUser(t *testing.T) {
 		_, _ = repo.suite(t, 1, 1)
 
 		user, err := repo.GetUser(t.Context(), domain.NewUUID())
-		snaps.MatchSnapshot(t, err)
+		assert.ErrorIs(t, err, service.ErrUserNotFound)
 		snaps.MatchJSON(t, user)
 	})
 }

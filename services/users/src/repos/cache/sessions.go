@@ -19,6 +19,10 @@ type repoSession struct {
 	CSRFToken string    `json:"csrf_token"`
 }
 
+func sessionKey(sessionID domain.UUID) string {
+	return fmt.Sprintf("session:%s", sessionID)
+}
+
 func (s *repoSession) domainify() *domain.Session {
 	if s == nil {
 		return nil
@@ -32,39 +36,28 @@ func (s *repoSession) domainify() *domain.Session {
 }
 
 func (repo *repository) InsertSession(ctx context.Context, session *domain.Session) error {
-	key := fmt.Sprintf("session:%s", session.ID)
+	key := sessionKey(session.ID)
 	p := repo.client.TxPipeline()
 
 	// Set the session.
-	jsonSetCmd := p.JSONSet(ctx, key, ".", &repoSession{
+	p.JSONSet(ctx, key, ".", &repoSession{
 		ID:        uuid.UUID(session.ID),
 		UserID:    uuid.UUID(session.UserID),
 		CSRFToken: string(session.CSRFToken),
 	})
 
 	// Set the session's expiry.
-	expireCmd := p.Expire(ctx, key, repo.config.SessionDuration)
+	p.Expire(ctx, key, repo.config.SessionDuration)
 
-	if _, err := p.Exec(ctx); err != nil {
-		return errors.Wrap(err, "failed command executions")
-	}
-
-	if err := jsonSetCmd.Err(); err != nil {
-		return errors.Wrap(err, "failed setting json")
-	}
-
-	if err := expireCmd.Err(); err != nil {
-		return errors.Wrap(err, "failed setting expiry")
-	}
-
-	return nil
+	// Execute the transaction.
+	_, err := p.Exec(ctx)
+	return errors.Wrap(err, "failed command executions")
 }
 
 func (repo *repository) GetSession(ctx context.Context, sessionID domain.UUID) (*domain.Session, error) {
-	key := fmt.Sprintf("session:%s", sessionID)
 
 	// Get the session.
-	sessionJSON, err := repo.client.JSONGet(ctx, key, ".").Result()
+	sessionJSON, err := repo.client.JSONGet(ctx, sessionKey(sessionID), ".").Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, service.ErrSessionNotFound

@@ -45,7 +45,7 @@ func (repo *repository) suite(t *testing.T, users int) []*domain.User {
 
 	var dummyUsers []*domain.User
 	for i := range users {
-		u := repoUser{
+		u := userRow{
 			ID:           uuid.New(),
 			Username:     fmt.Sprintf("username%v", i),
 			Email:        fmt.Sprintf("email%v", i),
@@ -58,13 +58,13 @@ func (repo *repository) suite(t *testing.T, users int) []*domain.User {
 			u.ID, u.Username, u.Email, u.PasswordHash, u.PasswordSalt)
 		require.NoError(t, err)
 
-		dummyUsers = append(dummyUsers, u.domainify())
+		dummyUsers = append(dummyUsers, u.user())
 	}
 
 	t.Cleanup(func() {
 		rows, err := repo.pool.Query(context.Background(), `SELECT * FROM users`)
 		require.NoError(t, err)
-		usersResults, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[repoUser])
+		usersResults, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[userRow])
 		require.NoError(t, err)
 		snaps.MatchJSON(t, usersResults, match.Any("#.ID", "#.CreatedAt", "#.UpdatedAt"))
 	})

@@ -13,6 +13,7 @@ const (
 	DomainErrorTypeUUIDInvalid     DomainErrorType = "uuid_invalid"
 	DomainErrorTypeUsernameInvalid DomainErrorType = "username_invalid"
 	DomainErrorTypePasswordInvalid DomainErrorType = "password_invalid"
+	DomainErrorTypeEmailInvalid    DomainErrorType = "email_invalid"
 )
 
 type DomainError struct {

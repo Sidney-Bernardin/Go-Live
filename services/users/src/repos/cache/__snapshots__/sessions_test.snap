@@ -1,17 +1,5 @@
 
-[TestInsertSession/successful - 1]
-nil
----
-
-[TestInsertSession/successful_upsert - 1]
-nil
----
-
 [TestGetSession/successful - 1]
-nil
----
-
-[TestGetSession/successful - 2]
 {
  "CSRFToken": "<Any value>",
  "ID": "<Any value>",
@@ -20,12 +8,5 @@ nil
 ---
 
 [TestGetSession/not_found - 1]
-&errors.fundamental{
-    msg:   "session not found",
-    stack: &errors.stack{0x5f48c1, 0x450b38, 0x441fe5, 0x441ece, 0x47e521},
-}
----
-
-[TestGetSession/not_found - 2]
 null
 ---

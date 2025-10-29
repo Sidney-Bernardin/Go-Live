@@ -11,7 +11,7 @@ import (
 func TestNewUsername(t *testing.T) {
 	t.Parallel()
 
-	t.Run("work", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		u := "foobarbaz"
 
 		username, err := NewUsername(u)
@@ -43,7 +43,7 @@ func TestNewUsername(t *testing.T) {
 func TestNewPassword(t *testing.T) {
 	t.Parallel()
 
-	t.Run("work", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		pw := "foobarbaz"
 
 		password, err := NewPassword(pw)
@@ -88,6 +88,7 @@ func TestNewPasswordHash(t *testing.T) {
 		require.NoError(t, err)
 
 		passwordSalt := NewPasswordSalt()
+
 		passwordHash, err := NewPasswordHash(password, passwordSalt)
 		require.NoError(t, err)
 		require.NoError(t, bcrypt.CompareHashAndPassword(passwordHash, []byte(string(password)+string(passwordSalt))))

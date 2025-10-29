@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type repoUser struct {
+type userRow struct {
 	ID        uuid.UUID `db:"id"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
@@ -23,19 +23,19 @@ type repoUser struct {
 	PasswordSalt string `db:"password_salt"`
 }
 
-func (u *repoUser) domainify() *domain.User {
-	if u == nil {
+func (r *userRow) user() *domain.User {
+	if r == nil {
 		return nil
 	}
 
 	return &domain.User{
-		ID:           domain.UUID(u.ID),
-		CreatedAt:    u.CreatedAt,
-		UpdatedAt:    u.UpdatedAt,
-		Username:     domain.Username(u.Username),
-		Email:        u.Email,
-		PasswordHash: u.PasswordHash,
-		PasswordSalt: domain.PasswordSalt(u.PasswordSalt),
+		ID:           domain.UUID(r.ID),
+		CreatedAt:    r.CreatedAt,
+		UpdatedAt:    r.UpdatedAt,
+		Username:     domain.Username(r.Username),
+		Email:        r.Email,
+		PasswordHash: r.PasswordHash,
+		PasswordSalt: domain.PasswordSalt(r.PasswordSalt),
 	}
 }
 
@@ -84,7 +84,7 @@ func (repo *repository) GetUserByID(ctx context.Context, userID domain.UUID) (*d
 	}
 
 	// Decode the user.
-	user, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByName[repoUser])
+	userRow, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByName[userRow])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, service.ErrUserNotFound
@@ -93,5 +93,5 @@ func (repo *repository) GetUserByID(ctx context.Context, userID domain.UUID) (*d
 		return nil, errors.Wrap(err, "failed collecting rows")
 	}
 
-	return user.domainify(), nil
+	return userRow.user(), nil
 }
