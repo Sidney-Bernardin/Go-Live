@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"users/src"
 	"users/src/domain"
 
@@ -10,23 +11,30 @@ import (
 
 type Service struct {
 	config *src.Config
+	logger *slog.Logger
 
-	database DatabaseRepository
-	cache    CacheRepository
+	database  DatabaseRepository
+	cache     CacheRepository
+	blobStore BlobStoreRepository
 }
 
 type (
 	DatabaseRepository interface {
-		InsertUser(context.Context, *domain.User) error
-		GetUserByID(context.Context, domain.UUID) (*domain.User, error)
+		InsertUser(ctx context.Context, user *domain.User) error
+		GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error)
+		GetUserByUsername(ctx context.Context, username domain.Username) (*domain.User, error)
 	}
 
 	CacheRepository interface {
-		InsertUser(context.Context, *domain.User) error
-		GetUser(context.Context, domain.UUID) (*domain.User, error)
+		InsertUser(ctx context.Context, user *domain.User) error
+		GetUser(ctx context.Context, userID domain.UUID) (*domain.User, error)
 
-		InsertSession(context.Context, *domain.Session) error
-		GetSession(context.Context, domain.UUID) (*domain.Session, error)
+		InsertSession(ctx context.Context, session *domain.Session) error
+		GetSession(ctx context.Context, sessionID domain.UUID) (*domain.Session, error)
+	}
+
+	BlobStoreRepository interface {
+		InsertProfilePicture(ctx context.Context, userID domain.UUID, profilePicture domain.ProfilePicture) error
 	}
 )
 
@@ -40,12 +48,16 @@ var (
 
 func New(
 	config *src.Config,
+	logger *slog.Logger,
 	database DatabaseRepository,
 	cache CacheRepository,
+	blobStore BlobStoreRepository,
 ) *Service {
 	return &Service{
 		config,
+		logger,
 		database,
 		cache,
+		blobStore,
 	}
 }

@@ -1,0 +1,10 @@
+[
+    {
+        "Effect": "Allow",
+        "Principle" :"*",
+        "Action": [
+            "s3:GetObject"
+        ],
+        "Resource": "arn:aws:"
+    }
+]

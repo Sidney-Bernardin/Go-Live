@@ -1,0 +1,21 @@
+:root {
+    --green: #389e70;
+    --dark-green: #2e825b;
+    --black: #253342;
+    --white: #dbdbdb;
+    --yellow: #c7c964;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    color: var(--black);
+}
+
+body {
+    width: 100%;
+    height: 100vh;
+    color: var(--white);
+    font-family: sans-serif;
+}

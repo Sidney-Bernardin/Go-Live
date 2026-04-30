@@ -72,7 +72,7 @@ func (repo *repository) InsertUser(ctx context.Context, user *domain.User) error
 }
 
 const qGetUserByID = `
-	SELECT * FROM users WHERE id = $1
+	SELECT id, username, email FROM users WHERE id = $1
 `
 
 func (repo *repository) GetUserByID(ctx context.Context, userID domain.UUID) (*domain.User, error) {
@@ -84,7 +84,32 @@ func (repo *repository) GetUserByID(ctx context.Context, userID domain.UUID) (*d
 	}
 
 	// Decode the user.
-	userRow, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByName[userRow])
+	userRow, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByNameLax[userRow])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, service.ErrUserNotFound
+		}
+
+		return nil, errors.Wrap(err, "failed collecting rows")
+	}
+
+	return userRow.user(), nil
+}
+
+const qGetUserByUsername = `
+	SELECT id, username, email, password_hash, password_salt FROM users WHERE username = $1
+`
+
+func (repo *repository) GetUserByUsername(ctx context.Context, username domain.Username) (*domain.User, error) {
+
+	// Get the user with a matching username.
+	userRows, err := repo.pool.Query(ctx, qGetUserByUsername, username)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed selecting")
+	}
+
+	// Decode the user.
+	userRow, err := pgx.CollectExactlyOneRow(userRows, pgx.RowToAddrOfStructByNameLax[userRow])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, service.ErrUserNotFound

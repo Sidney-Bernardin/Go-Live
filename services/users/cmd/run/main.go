@@ -8,6 +8,7 @@ import (
 	"users/src"
 	"users/src/apis/http"
 	"users/src/domain/service"
+	"users/src/repos/blobstore"
 	"users/src/repos/cache"
 	"users/src/repos/database"
 )
@@ -39,8 +40,15 @@ func main() {
 		return
 	}
 
+	// Create blob-store repository.
+	blobStoreRepo, err := blobstore.New(ctx, config)
+	if err != nil {
+		logger.Error("Failed creating blob-store repository", src.ErrGroup(err))
+		return
+	}
+
 	// Create service.
-	svc := service.New(config, databaseRepo, cacheRepo)
+	svc := service.New(config, logger.With("resource", "domain-service"), databaseRepo, cacheRepo, blobStoreRepo)
 
 	// Create and run HTTP API.
 	http := http.New(config, logger.With("resource", "http-api"), svc)

@@ -10,9 +10,11 @@ func (api *API) routes() {
 
 	r.Route("/login", func(r chi.Router) {
 		r.Post("/signup", api.handleSignup)
+		r.Post("/signin", api.handleSignin)
 	})
 
 	r.Route("/users", func(r chi.Router) {
-		r.Get("/", api.handleGetUser)
+		r.Get("/{user_id}", api.handleUserGet)
+		r.Get("/self", api.handleUserGetSelf)
 	})
 }

@@ -37,7 +37,3 @@ func (svc *Service) GetUserByID(ctx context.Context, userID domain.UUID) (*domai
 
 	return user, nil
 }
-
-func (svc *Service) SearchUsers(ctx context.Context, username domain.Username) ([]*domain.User, error) {
-	return nil, nil
-}

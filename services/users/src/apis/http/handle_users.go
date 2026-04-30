@@ -2,9 +2,9 @@ package http
 
 import (
 	"net/http"
-	"users/src"
 	"users/src/domain"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/pkg/errors"
 )
 
@@ -22,43 +22,52 @@ func newUserView(u *domain.User) *userView {
 	}
 }
 
-func (api *API) handleGetUser(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleUserGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	switch {
-
-	case r.URL.Query().Has("id"):
-
-		userID, err := domain.NewUUIDFromString(r.URL.Query().Get("id"))
-		if err != nil {
-			api.err(w, errors.Wrap(err, "failed creating UUID"))
-			return
-		}
-
-		user, err := api.service.GetUserByID(ctx, userID)
-		if err != nil {
-			api.err(w, errors.Wrap(err, "failed getting user"))
-			return
-		}
-
-		api.write(w, http.StatusOK, newUserView(user))
-
-	default:
-
-		username, err := domain.NewUsername(r.URL.Query().Get("username"))
-		if err != nil {
-			api.err(w, errors.Wrap(err, "failed creating username"))
-			return
-		}
-
-		users, err := api.service.SearchUsers(ctx, username)
-		if err != nil {
-			api.err(w, errors.Wrap(err, "failed getting users"))
-			return
-		}
-
-		api.write(w, http.StatusOK, src.MapSlice(users, func(user *domain.User) *userView {
-			return newUserView(user)
-		}))
+	userID, err := domain.NewUUIDFromString(chi.URLParam(r, "user_id"))
+	if err != nil {
+		api.err(w, errors.Wrap(err, "failed creating user-ID"))
+		return
 	}
+
+	user, err := api.service.GetUserByID(ctx, userID)
+	if err != nil {
+		api.err(w, errors.Wrap(err, "failed getting user"))
+		return
+	}
+
+	api.write(w, http.StatusOK, newUserView(user))
+}
+
+func (api *API) handleUserGetSelf(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	sessionIDCookie, err := r.Cookie(sessionIDCookieName)
+	if err != nil {
+		api.err(w, &apiError[apiErrorType]{
+			Type: apiErrorTypeUnauthorized,
+		})
+		return
+	}
+
+	sessionID, err := domain.NewUUIDFromString(sessionIDCookie.Value)
+	if err != nil {
+		api.err(w, errors.Wrap(err, "failed creating session-ID"))
+		return
+	}
+
+	session, err := api.service.Authenticate(ctx, sessionID)
+	if err != nil {
+		api.err(w, errors.Wrap(err, "failed authenticating"))
+		return
+	}
+
+	user, err := api.service.GetUserByID(ctx, session.UserID)
+	if err != nil {
+		api.err(w, errors.Wrap(err, "failed getting user"))
+		return
+	}
+
+	api.write(w, http.StatusOK, newUserView(user))
 }

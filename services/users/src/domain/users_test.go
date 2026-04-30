@@ -84,13 +84,43 @@ func TestNewPasswordHash(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bcrypt_comparison", func(t *testing.T) {
+		passwordSalt := NewPasswordSalt()
 		password, err := NewPassword("foobarbaz")
 		require.NoError(t, err)
-
-		passwordSalt := NewPasswordSalt()
 
 		passwordHash, err := NewPasswordHash(password, passwordSalt)
 		require.NoError(t, err)
 		require.NoError(t, bcrypt.CompareHashAndPassword(passwordHash, []byte(string(password)+string(passwordSalt))))
+	})
+}
+
+func TestPasswordHashCompare(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		passwordSalt := NewPasswordSalt()
+
+		password, err := NewPassword("foobarbaz")
+		require.NoError(t, err)
+
+		passwordHash, err := NewPasswordHash(password, passwordSalt)
+		require.NoError(t, err)
+
+		assert.True(t, passwordHash.Compare(password, passwordSalt))
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		passwordSalt := NewPasswordSalt()
+
+		passwordA, err := NewPassword("foobarbaz")
+		require.NoError(t, err)
+
+		passwordHash, err := NewPasswordHash(passwordA, passwordSalt)
+		require.NoError(t, err)
+
+		passwordB, err := NewPassword("bazbarfoo")
+		require.NoError(t, err)
+
+		assert.False(t, passwordHash.Compare(passwordB, passwordSalt))
 	})
 }

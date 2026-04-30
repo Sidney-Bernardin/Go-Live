@@ -1,5 +1,42 @@
 services:
 
+  aws:
+    container_name: aws
+    image: localstack/localstack:1.4.0
+    ports:
+      - 127.0.0.1:4566:4566            # LocalStack Gateway
+      - 127.0.0.1:4510-4559:4510-4559  # external services port range
+    volumes:
+      - ./tmp/aws-localstack:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # ==========
+
+  gateway:
+    container_name: gateway
+    image: nginx:1.29.3
+    ports:
+      - 8000:8000
+    volumes:
+      - ./services/gateway/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - aws
+      - users
+
+  live:
+    container_name: live
+    image: tiangolo/nginx-rtmp:latest-2025-11-03
+    ports:
+      - 8001:8000
+      - 1935:1935
+    volumes:
+      - ./services/live/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - aws
+      - users
+
+  # ==========
+
   users:
     container_name: users
     image: golive/users
@@ -8,14 +45,12 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_HTTP_ADDR: :8000
-      APP_HTTP_SESSION_COOKIE_DOMAIN: abc
       APP_GRPC_ADDR: :8001
-
-      APP_SESSION_DURATION: 24h
-
       APP_POSTGRES_URL: postgres://postgres:password@users-database:5432/users?sslmode=disable
       APP_REDIS_ADDR: users-cache:6379
+      APP_AWS_BASE_ENDPOINT: http://aws:4566
     depends_on:
+      - aws
       - users-database
       - users-cache
 
@@ -25,7 +60,11 @@ services:
     environment:
       POSTGRES_DB: users
       POSTGRES_PASSWORD: password
+    ports:
+      - 8010:5432
 
   users-cache:
     container_name: users-cache
     image: redis:8.2.2
+    ports:
+      - 8011:6379

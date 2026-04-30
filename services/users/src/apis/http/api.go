@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const sessionIDCookieName = "SESSION_ID"
+
 type API struct {
 	config  *src.Config
 	logger  *slog.Logger

@@ -12,12 +12,16 @@ type Config struct {
 	LogPrettyColor bool `split_words:"true" default:"true"`
 
 	HttpAddr                string `split_words:"true" required:"true"`
-	HttpSessionCookieDomain string `split_words:"true" required:"true"`
+	HttpSessionCookieDomain string `split_words:"true"`
 
-	SessionDuration time.Duration `split_words:"true" required:"true"`
+	SessionDuration             time.Duration `split_words:"true" default:"24h"`
+	ProfilePictureMaxBytes      int           `split_words:"true" default:"512000"`
+	ProfilePictureInsertTimeout time.Duration `split_words:"true" default:"30s"`
 
-	PostgresUrl string `split_words:"true" required:"true"`
-	RedisAddr   string `split_words:"true" required:"true"`
+	PostgresUrl     string `split_words:"true" required:"true"`
+	RedisAddr       string `split_words:"true" required:"true"`
+	AWSBaseRegion   string `split_words:"true" default:"us-east-1"`
+	AWSBaseEndpoint string `split_words:"true"`
 }
 
 func NewConfig() (*Config, error) {

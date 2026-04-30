@@ -10,10 +10,13 @@ const (
 	DomainErrorTypeUserDoesNotExist    DomainErrorType = "user_does_not_exist"
 	DomainErrorTypeSessionDoesNotExist DomainErrorType = "session_does_not_exist"
 
-	DomainErrorTypeUUIDInvalid     DomainErrorType = "uuid_invalid"
-	DomainErrorTypeUsernameInvalid DomainErrorType = "username_invalid"
-	DomainErrorTypePasswordInvalid DomainErrorType = "password_invalid"
-	DomainErrorTypeEmailInvalid    DomainErrorType = "email_invalid"
+	DomainErrorTypeUUIDInvalid           DomainErrorType = "uuid_invalid"
+	DomainErrorTypeUsernameInvalid       DomainErrorType = "username_invalid"
+	DomainErrorTypePasswordInvalid       DomainErrorType = "password_invalid"
+	DomainErrorTypeEmailInvalid          DomainErrorType = "email_invalid"
+	DomainErrorTypeProfilePictureInvalid DomainErrorType = "profile_picture_invalid"
+
+	DomainErrorTypeAuthenticationFailed DomainErrorType = "authentication_failed"
 )
 
 type DomainError struct {

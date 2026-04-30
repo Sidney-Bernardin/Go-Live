@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"io"
 	"time"
 	"users/src"
 
@@ -23,9 +24,13 @@ type Username string
 
 func NewUsername(u string) (Username, error) {
 	if len(u) < 3 || 32 < len(u) {
-		return "", &DomainError{DomainErrorTypeUsernameInvalid, "Username must be between 3 and 32 characters.", map[string]any{
-			"username": u,
-		}}
+		return "", &DomainError{
+			Type:    DomainErrorTypeUsernameInvalid,
+			Message: "Username must be between 3 and 32 characters.",
+			Details: map[string]any{
+				"username": u,
+			},
+		}
 	}
 	return Username(u), nil
 }
@@ -34,9 +39,13 @@ type Password string
 
 func NewPassword(pw string) (Password, error) {
 	if len(pw) < 8 || 100 < len(pw) {
-		return "", &DomainError{DomainErrorTypePasswordInvalid, "Password must be between 8 and 100 characters.", map[string]any{
-			"password": pw,
-		}}
+		return "", &DomainError{
+			Type:    DomainErrorTypePasswordInvalid,
+			Message: "Password must be between 8 and 100 characters.",
+			Details: map[string]any{
+				"password": pw,
+			},
+		}
 	}
 	return Password(pw), nil
 }
@@ -56,4 +65,25 @@ func NewPasswordHash(pw Password, pwSalt PasswordSalt) (PasswordHash, error) {
 		return nil, errors.Wrap(err, "failed hashing passwaord")
 	}
 	return PasswordHash(pwHash), nil
+}
+
+func (pwHash PasswordHash) Compare(pw Password, pwSalt PasswordSalt) bool {
+	return nil == bcrypt.CompareHashAndPassword(pwHash, []byte(string(pw)+string(pwSalt)))
+}
+
+type ProfilePicture io.Reader
+
+func NewProfilePicture(config *src.Config, pp io.Reader) (ProfilePicture, error) {
+	// b := make([]byte, config.ProfilePictureMaxBytes/10)
+	// _, err := io.LimitReader(pp, int64(config.ProfilePictureMaxBytes)).Read(b)
+	// if err != nil {
+	// 	if errors.Is(err, io.ErrUnexpectedEOF) {
+	// 		return nil, &DomainError{
+	// 			Type:    DomainErrorTypeProfilePictureInvalid,
+	// 			Message: fmt.Sprintf("The profile picture is too large. Must be below %v bytes", config.ProfilePictureMaxBytes),
+	// 		}
+	// 	}
+	// 	return nil, errors.Wrap(err, "failed reading")
+	// }
+	return ProfilePicture(pp), nil
 }
